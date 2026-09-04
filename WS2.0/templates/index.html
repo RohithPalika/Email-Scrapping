@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Author & Email Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen py-10 px-4">
+    <div class="max-w-6xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl font-bold text-indigo-400">Journal Author Data Extractor</h1>
+            <p class="text-slate-400">Extract verified corresponding author names and emails directly from published research PDFs.</p>
+        </div>
+
+        <!-- Search Form Card -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
+            <form id="extractForm" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                
+                <!-- Source Selection Dropdown -->
+                <div class="space-y-1">
+                    <label class="text-sm font-semibold text-slate-300">Journal Source</label>
+                    <select id="source_site" name="source_site" 
+                            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="plos">PLOS</option>
+                        <option value="europepmc">Europe PMC</option>
+                        <option value="elife">eLife</option>
+                        <option value="openalex">OpenAlex (All Servers)</option>
+                        <option value="imedpub">iMedPub</option>
+                        <option value="arxiv">arXiv.org</option>
+                        <option value="biorxiv">bioRxiv / medRxiv</option>
+                        <option value="crossref">Crossref (Multi-Server)</option>
+                    </select>
+                </div>
+
+                <!-- Topic Input -->
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-sm font-semibold text-slate-300">Research Topic / Keywords</label>
+                    <input type="text" id="topic" name="topic" required placeholder="e.g. Medical Sciences" 
+                           class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <!-- Count Input -->
+                <div class="space-y-1">
+                    <label class="text-sm font-semibold text-slate-300">Papers Count</label>
+                    <input type="number" id="max_papers" name="max_papers" min="1" max="100" value="10" 
+                           class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" id="submitBtn" 
+                            class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex justify-center items-center gap-2">
+                        <span>Extract Data</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Status & Loader -->
+        <div id="statusBox" class="hidden p-4 rounded-lg text-center font-medium bg-slate-800 border border-slate-700">
+            <div id="loader" class="flex justify-center items-center space-x-2 text-indigo-400">
+                <svg class="animate-spin h-5 w-5 text-indigo-400" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span id="statusText">Scanning repository, downloading PDFs, and extracting contacts...</span>
+            </div>
+        </div>
+
+        <!-- Results Table Section -->
+        <div id="resultsCard" class="hidden space-y-4">
+            <div class="flex justify-between items-center bg-slate-800 p-4 rounded-lg border border-slate-700">
+                <div>
+                    <span class="text-sm text-slate-400">Total Verified Contacts Found: </span>
+                    <span id="countBadge" class="text-lg font-bold text-emerald-400">0</span>
+                </div>
+                <a id="downloadLink" href="#" 
+                   class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download Excel (.xlsx)
+                </a>
+            </div>
+
+            <div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="bg-slate-700 text-slate-200 uppercase text-xs">
+                        <tr>
+                            <th class="px-4 py-3">Source</th>
+                            <th class="px-4 py-3">PDF File</th>
+                            <th class="px-4 py-3">Paper Title</th>
+                            <th class="px-4 py-3">Author Name</th>
+                            <th class="px-4 py-3">Email ID</th>
+                            <th class="px-4 py-3">DOI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-700">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Frontend Script -->
+    <script>
+        const form = document.getElementById('extractForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusBox = document.getElementById('statusBox');
+        const statusText = document.getElementById('statusText');
+        const resultsCard = document.getElementById('resultsCard');
+        const tableBody = document.getElementById('tableBody');
+        const countBadge = document.getElementById('countBadge');
+        const downloadLink = document.getElementById('downloadLink');
+
+        let pollInterval = null;
+
+        function setLoading(isLoading) {
+            submitBtn.disabled = isLoading;
+            if (isLoading) {
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                statusBox.classList.remove('hidden');
+            } else {
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                statusBox.classList.add('hidden');
+            }
+        }
+
+        function showResults(result) {
+            if (result.success && result.data.length > 0) {
+                countBadge.textContent = result.total_records;
+                downloadLink.href = `/download/${result.download_file}`;
+                tableBody.innerHTML = '';
+                result.data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-750 border-b border-slate-700';
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 font-semibold text-indigo-400 text-xs">${row['Source Journal']}</td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-300">${row['PDF File Name']}</td>
+                        <td class="px-4 py-3 max-w-xs truncate" title="${row['Paper Title']}">${row['Paper Title']}</td>
+                        <td class="px-4 py-3 font-semibold text-white">${row['Author Name']}</td>
+                        <td class="px-4 py-3 text-emerald-400 font-mono text-xs">${row['Email ID']}</td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-400">${row['DOI']}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+                resultsCard.classList.remove('hidden');
+            } else {
+                alert(result.message || result.error || 'No matching records found.');
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Reset UI
+            resultsCard.classList.add('hidden');
+            tableBody.innerHTML = '';
+            statusText.textContent = 'Starting extraction...';
+            setLoading(true);
+
+            const formData = new FormData(form);
+
+            try {
+                // STEP 1: Start background task — returns instantly with task_id
+                const startResp = await fetch('/start-extraction', {
+                    method: 'POST',
+                    body: formData
+                });
+                const startData = await startResp.json();
+
+                if (startData.error) {
+                    setLoading(false);
+                    alert(startData.error);
+                    return;
+                }
+
+                const taskId = startData.task_id;
+
+                // STEP 2: Poll /status/<task_id> every 3 seconds for live progress
+                pollInterval = setInterval(async () => {
+                    try {
+                        const statusResp = await fetch(`/status/${taskId}`);
+                        const statusData = await statusResp.json();
+
+                        // Show the live progress message from backend
+                        if (statusData.progress) {
+                            statusText.textContent = statusData.progress;
+                        }
+
+                        if (statusData.status === 'done' || statusData.status === 'error') {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+
+                            // STEP 3: Fetch the final result
+                            const resultResp = await fetch(`/result/${taskId}`);
+                            const result = await resultResp.json();
+
+                            setLoading(false);
+                            showResults(result);
+                        }
+                    } catch (pollErr) {
+                        console.error('Polling error:', pollErr);
+                        // Keep polling — temporary network hiccup
+                    }
+                }, 3000);
+
+            } catch (err) {
+                setLoading(false);
+                if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+                alert('Could not connect to the backend. Please make sure the server is running.');
+            }
+        });
+    </script>
+</body>
+</html>

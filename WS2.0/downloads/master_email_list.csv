@@ -1,0 +1,52 @@
+PDF File Name,Source Journal,Paper Title,Author Name,Email ID,DOI
+arxiv_paper_1.pdf,arXiv,Mapping Academic Institutions According to Their Journal Publication Profile: Spanish Universities as a Case Study,Rosa Rodríguez-Sánchez,rosa@decsai.ugr.es,https://doi.org/10.1002/asi.22735
+arxiv_paper_1.pdf,arXiv,Mapping Academic Institutions According to Their Journal Publication Profile: Spanish Universities as a Case Study,Daniel Torres-Salinas,torressalinas@gmail.com,https://doi.org/10.1002/asi.22735
+arxiv_paper_6.pdf,arXiv,Interactive Overlays of Journals and the Measurement of Interdisciplinarity on the basis of Aggregated Journal-Journal Citations,Loet Leydesdorff,loet@leydesdorff.net,http://arxiv.org/abs/1301.1013v2
+arxiv_paper_6.pdf,arXiv,Interactive Overlays of Journals and the Measurement of Interdisciplinarity on the basis of Aggregated Journal-Journal Citations,Ismael Rafols,i.rafols@sussex.ac.uk,http://arxiv.org/abs/1301.1013v2
+arxiv_paper_6.pdf,arXiv,Interactive Overlays of Journals and the Measurement of Interdisciplinarity on the basis of Aggregated Journal-Journal Citations,Chaomei Chen,chaomei.chen@cis.drexel.edu,http://arxiv.org/abs/1301.1013v2
+arxiv_paper_7.pdf,arXiv,Journal Maps on the Basis of Scopus Data: A comparison with the Journal Citation Reports of the ISI,Felix de Moya-Anegon,felix.moya@scimago.es,http://arxiv.org/abs/0909.3193v1
+arxiv_paper_9.pdf,arXiv,The Dynamics of Triads in Aggregated Journal-Journal Citation Relations: Specialty Developments at the Above-Journal Level,Wouter de Nooy,w.denooy@uva.nl,http://arxiv.org/abs/1504.05840v2
+arxiv_paper_10.pdf,arXiv,Construction of a Pragmatic Base Line for Journal Classifications and Maps Based on Aggregated Journal-Journal Citation Relations,Lutz Bornmann,bornmann@gv.mpg.de,http://arxiv.org/abs/1604.02716v4
+arxiv_paper_10.pdf,arXiv,Construction of a Pragmatic Base Line for Journal Classifications and Maps Based on Aggregated Journal-Journal Citation Relations,Ping Zhou,pingzhou@zju.edu.cn,http://arxiv.org/abs/1604.02716v4
+medrxiv_paper_1.pdf,bioRxiv / medRxiv,Psychedelics as pharmacotherapeutics for substance use disorders: a scoping review on clinical trials and perspectives on underlying neurobiology,Davide Amato,davide.amato@uc.edu,10.1101/2025.04.04.25324315
+medrxiv_paper_1.pdf,bioRxiv / medRxiv,Finding Case Report Nuggets: A Web-Based Tool for Mining and Enhancing the Value of Clinical Case Reports,Neil R. Smalheiser,neils@uic.edu,10.1101/2025.11.13.25340162
+arxiv_paper_1.pdf,arXiv,AI-Enabled Lung Cancer Prognosis,Bardia Yousefi,byousefi@umd.edu,http://arxiv.org/abs/2402.09476v1
+arxiv_paper_4.pdf,arXiv,Cancer Networks: A general theoretical and computational framework for understanding cancer,Eric Werner,eric.werner@dpag.ox.ac.uk,http://arxiv.org/abs/1110.5865v1
+arxiv_paper_5.pdf,arXiv,Metalens stereoscopic optical palpation for imaging cancer mechanics,Haoran Ren,haoran.ren@monash.eduqi.fang,http://arxiv.org/abs/2608.24305v1
+arxiv_paper_6.pdf,arXiv,Convolutional neural network models for cancer type prediction based on gene expression,Yufei Huang,yufei.huang@utsa.edu,http://arxiv.org/abs/1906.07794v1
+arxiv_paper_6.pdf,arXiv,Convolutional neural network models for cancer type prediction based on gene expression,Yidong Chen,cheny8@uthscsa.edu,http://arxiv.org/abs/1906.07794v1
+arxiv_paper_8.pdf,arXiv,Focus on the Physics of Cancer,Thomas Risler,thomas.risler@curie.fr,https://doi.org/10.1088/1367-2630/17/5/055011
+arxiv_paper_10.pdf,arXiv,Complexity in cancer stem cells and tumor evolution: towards precision medicine,Caterina A. M. La Porta,caterina.laporta@unimi.it,https://doi.org/10.1016/j.semcancer.2017.02.007
+crossref_paper_1.pdf,Crossref (Multi-Server),Beyond Single Biomarkers: Multimodal Machine Learning for Precision Medicine Across Clinical Specialties,Simbarashe Magwenzi,simbarashe.magwenzi@nynosk.com,10.64949/kap5fa07
+crossref_paper_5.pdf,Crossref (Multi-Server),Evaluation of machine learning methods in medicine: real data application,Hülya Binokay,hulyabinokay@gmail.com,10.37609/srinmed.25
+crossref_paper_2.pdf,npj Digital Medicine,Machine learning-based quantitative prediction of drug exposure in drug-drug interactions using drug label information,Bongki Moon,bkmoon@snu.ac.kr,10.1038/s41746-022-00639-0
+arxiv_paper_2.pdf,arXiv,Efficient embedding network for 3D brain tumor segmentation,Ahror Belaid,ahror.belaid@univ-bejaia.dz,http://arxiv.org/abs/2011.11052v1
+arxiv_paper_4.pdf,arXiv,MBDRes-U-Net: Multi-Scale Lightweight Brain Tumor Segmentation Network,Longfeng Shen,longfengshen521@126.com,http://arxiv.org/abs/2411.01896v1
+arxiv_paper_5.pdf,arXiv,DR-Unet104 for Multimodal MRI brain tumor segmentation,Jordan Colman,jordan.colman@nhs.net,https://doi.org/10.1007/978-3-030-72087-2_36
+arxiv_paper_5.pdf,arXiv,DR-Unet104 for Multimodal MRI brain tumor segmentation,Lei Zhang,lzhang@lincoln.ac.uk,https://doi.org/10.1007/978-3-030-72087-2_36
+arxiv_paper_5.pdf,arXiv,DR-Unet104 for Multimodal MRI brain tumor segmentation,Wenting Duan,wduan@lincoln.ac.uk,https://doi.org/10.1007/978-3-030-72087-2_36
+arxiv_paper_5.pdf,arXiv,DR-Unet104 for Multimodal MRI brain tumor segmentation,Xujiong Ye,xye@lincoln.ac.uk,https://doi.org/10.1007/978-3-030-72087-2_36
+arxiv_paper_6.pdf,arXiv,Brain Tumor Sequence Registration with Non-iterative Coarse-to-fine Networks and Dual Deep Supervision,Lei Bi,china.lei.bi@sydney.edu.au,https://doi.org/10.1007/978-3-031-33842-7_24
+arxiv_paper_7.pdf,arXiv,Efficient Meningioma Tumor Segmentation Using Ensemble Learning,Mohammad Mahdi Danesh Pajouh,mohammadmahdi.danesh@ucalgary.ca,http://arxiv.org/abs/2510.21040v1
+arxiv_paper_8.pdf,arXiv,Reproducible Evaluation of Data Augmentation and Loss Functions for Brain Tumor Segmentation,Saumya B,saumya.b@fsid-iisc.in,http://arxiv.org/abs/2510.08617v1
+arxiv_paper_9.pdf,arXiv,HNF-Netv2 for Brain Tumor Segmentation using multi-modal MR Imaging,Yong Xia,yxia@nwpu.edu.cn,http://arxiv.org/abs/2202.05268v1
+crossref_paper_4.pdf,Developmental Cognitive Neuroscience,Biospecimens in the HEALthy Brain and Child Development (HBCD) Study: Rationale and protocol,Ryan Bogdan,rbogdan@wustl.edu,10.1016/j.dcn.2024.101451
+crossref_paper_4.pdf,Developmental Cognitive Neuroscience,Biospecimens in the HEALthy Brain and Child Development (HBCD) Study: Rationale and protocol,Ludmila Bakhireva,lbakhireva@unm.edu,10.1016/j.dcn.2024.101451
+arxiv_paper_8.pdf,arXiv,Brain Tumor Segmentation using 3D-CNNs with Uncertainty Estimation,Laura Mora Ballestar,lmoraballestar@gmail.com,http://arxiv.org/abs/2009.12188v1
+arxiv_paper_8.pdf,arXiv,Brain Tumor Segmentation using 3D-CNNs with Uncertainty Estimation,Veronica Vilaplana,veronica.vilaplana@upc.edu,http://arxiv.org/abs/2009.12188v1
+arxiv_paper_9.pdf,arXiv,Robust Semantic Segmentation of Brain Tumor Regions from 3D MRIs,Andriy Myronenko,amyronenko@nvidia.com,http://arxiv.org/abs/2001.02040v1
+arxiv_paper_9.pdf,arXiv,Robust Semantic Segmentation of Brain Tumor Regions from 3D MRIs,Ali Hatamizadeh,ahatamizadeh@nvidia.com,http://arxiv.org/abs/2001.02040v1
+crossref_paper_1.pdf,Brain Tumor Research and Treatment,Remote Postoperative Epidural Hematoma after Brain Tumor Surgery,Hyun Park,jhyun@catholic.ac.kr,10.14791/btrt.2015.3.2.132
+crossref_paper_1.pdf,Brain Tumor Research and Treatment,Basics for Pediatric Brain Tumor Imaging: Techniques and Protocol Recommendations,Ah Young Jung,ahyoung.jung.rad@gmail.com,10.14791/btrt.2023.0037
+crossref_paper_2.pdf,Brain Tumor Research and Treatment,A Rare Case of Nontuberculous Mycobacterial Abscess Mimicking Brain Tumor in an Immunocompetent Patient,Junho Jung,kkonan93@naver.com,10.14791/btrt.2023.0019
+crossref_paper_4.pdf,Brain Tumor Research and Treatment,Pituitary Neuroendocrine Tumor: Is It Benign or Malignant?,Chae Heuck Lee,chleens@paik.ac.kr,10.14791/btrt.2023.0015
+crossref_paper_5.pdf,Brain Tumor Research and Treatment,Clinical Practice Guidelines for Brain Metastasis From Solid Tumors,Kyoung Su Sung,sungks1465@gmail.com,10.14791/btrt.2023.0049
+crossref_paper_6.pdf,Brain Tumor Research and Treatment,Molecular Biology of Brain Metastases,Ho-Shin Gwak,nsghs@ncc.re.kr,10.14791/btrt.2022.0045
+crossref_paper_8.pdf,Brain Tumor Research and Treatment,Awake Craniotomy and Intraoperative Musical Performance for Brain Tumor Surgery: Case Report and Literature Review,Rafael A. Vega,rvega@bidmc.harvard.edu,10.14791/btrt.2023.0002
+crossref_paper_2.pdf,Diabetes &amp; Metabolism Journal,Gestational Diabetes in Korea: Incidence and Risk Factors of Diabetes in Women with Previous Gestational Diabetes,Hak Chul Jang,janghak@snu.ac.kr,10.4093/dmj.2011.35.1.1
+crossref_paper_3.pdf,British Journal of Diabetes,Abstracts from ABCD Diabetes Update,Diabetes Update 2023,line@www.bjd-abd.com,10.15277/bjd.2023.406
+crossref_paper_4.pdf,Diabetes Updates,Dulaglutide For effective diabetes management,Khan C,chandnikhann22@gmail.com,10.15761/du.1000123
+crossref_paper_6.pdf,The Journal of Korean Diabetes,Role of Diabetes Educators and Effectiveness of Diabetes Education,HeeSook Kim,kimhs02041@hotmail.com,10.4093/jkd.2013.14.4.194
+crossref_paper_6.pdf,The Journal of Korean Diabetes,Role of Diabetes Educators and Effectiveness of Diabetes Education,HeeSook Kim,khs0204@dongnam.ac.kr,10.4093/jkd.2013.14.4.194
+crossref_paper_8.pdf,Diabetes &amp; Obesity International Journal,Global Epidemic of Obesity and Diabetes: World Diabetes Day-2018,Gundu HR Rao,gundurao9@gmail.com,10.23880/doij-16000189
+crossref_paper_9.pdf,British Journal of Diabetes,The American Diabetes Association’s new standards for diabetes care,Paul Grant,drpaul.grant@doctors.org.uk,10.15277/bjd.2016.086
