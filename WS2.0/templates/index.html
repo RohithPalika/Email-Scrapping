@@ -5,68 +5,270 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Academic Author & Email Extractor</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for country list */
+        .country-scroll::-webkit-scrollbar { width: 4px; }
+        .country-scroll::-webkit-scrollbar-track { background: #1e293b; }
+        .country-scroll::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 2px; }
+
+        /* Year range slider accent */
+        input[type=range] { accent-color: #6366f1; }
+
+        /* Animated filter panel */
+        #filterPanel { transition: max-height 0.3s ease, opacity 0.3s ease; }
+        #filterPanel.collapsed { max-height: 0; opacity: 0; overflow: hidden; }
+        #filterPanel.expanded  { max-height: 600px; opacity: 1; }
+
+        /* Checkbox styling */
+        .filter-check { accent-color: #6366f1; width: 14px; height: 14px; cursor: pointer; }
+
+        /* Tag badge for selected filters */
+        .filter-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #312e81; color: #c7d2fe; font-size: 11px;
+            padding: 2px 8px; border-radius: 999px; border: 1px solid #4f46e5;
+        }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen py-10 px-4">
-    <div class="max-w-6xl mx-auto space-y-8">
-        
+    <div class="max-w-6xl mx-auto space-y-6">
+
         <!-- Header -->
-        <div class="text-center space-y-2">
+        <div class="text-center space-y-1">
             <h1 class="text-3xl font-bold text-indigo-400">Journal Author Data Extractor</h1>
-            <p class="text-slate-400">Extract verified corresponding author names and emails directly from published research PDFs.</p>
+            <p class="text-slate-400 text-sm">Extract verified corresponding author names and emails directly from published research PDFs.</p>
         </div>
 
-        <!-- Search Form Card -->
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
-            <form id="extractForm" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                
-                <!-- Source Selection Dropdown -->
-                <div class="space-y-1">
-                    <label class="text-sm font-semibold text-slate-300">Journal Source</label>
-                    <select id="source_site" name="source_site" 
-                            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500">
-                        <option value="plos">PLOS</option>
-                        <option value="europepmc">Europe PMC</option>
-                        <option value="elife">eLife</option>
-                        <option value="openalex">OpenAlex (All Servers)</option>
-                        <option value="imedpub">iMedPub</option>
-                        <option value="arxiv">arXiv.org</option>
-                        <option value="biorxiv">bioRxiv / medRxiv</option>
-                        <option value="crossref">Crossref (Multi-Server)</option>
-                    </select>
+        <!-- Main Card -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl space-y-5">
+            <form id="extractForm">
+
+                <!-- Row 1: Source / Topic / Count / Submit -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+
+                    <!-- Source -->
+                    <div class="space-y-1">
+                        <label class="text-sm font-semibold text-slate-300">Journal Source</label>
+                        <select id="source_site" name="source_site"
+                                class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                            <option value="plos">PLOS</option>
+                            <option value="europepmc">Europe PMC</option>
+                            <option value="elife">eLife</option>
+                            <option value="openalex">OpenAlex (All Servers)</option>
+                            <option value="imedpub">iMedPub</option>
+                            <option value="arxiv">arXiv.org</option>
+                            <option value="biorxiv">bioRxiv / medRxiv</option>
+                            <option value="crossref">Crossref (Multi-Server)</option>
+                            <option value="sciencedirect">ScienceDirect (Elsevier)</option>
+                        </select>
+                    </div>
+
+                    <!-- Topic -->
+                    <div class="md:col-span-2 space-y-1">
+                        <label class="text-sm font-semibold text-slate-300">Research Topic / Keywords</label>
+                        <input type="text" id="topic" name="topic" required placeholder="e.g. Medical Sciences"
+                               class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <!-- Count -->
+                    <div class="space-y-1">
+                        <label class="text-sm font-semibold text-slate-300">Papers Count</label>
+                        <input type="number" id="max_papers" name="max_papers" min="1" max="100" value="10"
+                               class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <!-- Submit -->
+                    <div>
+                        <button type="submit" id="submitBtn"
+                                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex justify-center items-center gap-2">
+                            <span>Extract Data</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Topic Input -->
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-sm font-semibold text-slate-300">Research Topic / Keywords</label>
-                    <input type="text" id="topic" name="topic" required placeholder="e.g. Medical Sciences" 
-                           class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
-                </div>
-
-                <!-- Count Input -->
-                <div class="space-y-1">
-                    <label class="text-sm font-semibold text-slate-300">Papers Count</label>
-                    <input type="number" id="max_papers" name="max_papers" min="1" max="100" value="10" 
-                           class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
-                </div>
-
-                <!-- Submit Button -->
-                <div>
-                    <button type="submit" id="submitBtn" 
-                            class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex justify-center items-center gap-2">
-                        <span>Extract Data</span>
+                <!-- Filter Toggle Button -->
+                <div class="flex items-center gap-3">
+                    <button type="button" id="filterToggle"
+                            class="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+                        <svg id="filterChevron" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M7 8h10M10 12h4"/>
+                        </svg>
+                        Advanced Filters
+                    </button>
+                    <!-- Active filter tags (shown when filters are selected) -->
+                    <div id="filterTags" class="flex flex-wrap gap-1.5"></div>
+                    <button type="button" id="clearFilters" class="hidden text-xs text-red-400 hover:text-red-300 ml-auto">
+                        Clear All Filters
                     </button>
                 </div>
+
+                <!-- Filter Panel (collapsible) -->
+                <div id="filterPanel" class="collapsed">
+                    <div class="border border-slate-600 rounded-xl p-5 bg-slate-900/60 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                        <!-- Column A: Countries -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-indigo-300 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
+                                    </svg>
+                                    Countries / Regions
+                                </h3>
+                                <button type="button" id="clearCountries" class="text-xs text-slate-500 hover:text-slate-300">Clear</button>
+                            </div>
+                            <p class="text-xs text-slate-500">Leave all unchecked = no country filter</p>
+                            <div class="country-scroll space-y-2 max-h-52 overflow-y-auto pr-1">
+                                <!-- 13 countries from the screenshot -->
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="USA"> USA
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Italy"> Italy
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="UK"> UK
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Spain"> Spain
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Romania"> Romania
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="France"> France
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Brazil"> Brazil
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Germany"> Germany
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Australia"> Australia
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Canada"> Canada
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Mexico"> Mexico
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Saudi Arabia"> Saudi Arabia
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Egypt"> Egypt
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Column B: Year Range -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-indigo-300 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    Publication Year
+                                </h3>
+                                <button type="button" id="clearYears" class="text-xs text-slate-500 hover:text-slate-300">Clear</button>
+                            </div>
+                            <p class="text-xs text-slate-500">Leave blank = no year filter. Default shows last 3 years.</p>
+                            <div class="space-y-4 pt-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="space-y-1 flex-1">
+                                        <label class="text-xs text-slate-400">From Year</label>
+                                        <input type="number" id="year_from" name="year_from"
+                                               min="1990" max="2026" placeholder="e.g. 2023"
+                                               class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                                    </div>
+                                    <div class="pt-5 text-slate-500 font-bold">—</div>
+                                    <div class="space-y-1 flex-1">
+                                        <label class="text-xs text-slate-400">To Year</label>
+                                        <input type="number" id="year_to" name="year_to"
+                                               min="1990" max="2026" placeholder="e.g. 2026"
+                                               class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                                    </div>
+                                </div>
+                                <!-- Quick preset buttons -->
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" onclick="setYearPreset(2024,2026)"
+                                            class="text-xs px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500 hover:text-indigo-300 text-slate-400 transition-colors">
+                                        Last 2 years
+                                    </button>
+                                    <button type="button" onclick="setYearPreset(2023,2026)"
+                                            class="text-xs px-3 py-1.5 rounded-lg border border-indigo-700 bg-indigo-900/40 text-indigo-300 hover:border-indigo-500 transition-colors">
+                                        Last 3 years ✓
+                                    </button>
+                                    <button type="button" onclick="setYearPreset(2020,2026)"
+                                            class="text-xs px-3 py-1.5 rounded-lg border border-slate-600 hover:border-indigo-500 hover:text-indigo-300 text-slate-400 transition-colors">
+                                        Last 6 years
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column C: Article Types -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-indigo-300 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    Article Types
+                                </h3>
+                                <button type="button" id="clearTypes" class="text-xs text-slate-500 hover:text-slate-300">Clear</button>
+                            </div>
+                            <p class="text-xs text-slate-500">Leave all unchecked = no type filter</p>
+                            <div class="space-y-2.5 pt-1">
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check type-cb" name="article_types[]" value="Article"> Article
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check type-cb" name="article_types[]" value="Review"> Review
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check type-cb" name="article_types[]" value="Systematic Review"> Systematic Review
+                                </label>
+                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                    <input type="checkbox" class="filter-check type-cb" name="article_types[]" value="Brief Report"> Brief Report
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
             </form>
         </div>
 
         <!-- Status & Loader -->
-        <div id="statusBox" class="hidden p-4 rounded-lg text-center font-medium bg-slate-800 border border-slate-700">
-            <div id="loader" class="flex justify-center items-center space-x-2 text-indigo-400">
-                <svg class="animate-spin h-5 w-5 text-indigo-400" viewBox="0 0 24 24" fill="none">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                </svg>
-                <span id="statusText">Scanning repository, downloading PDFs, and extracting contacts...</span>
+        <div id="statusBox" class="hidden p-6 rounded-xl bg-slate-800 border border-slate-700 shadow-xl space-y-4">
+            <div class="flex justify-between items-center text-sm font-medium">
+                <div class="flex items-center space-x-3 text-indigo-400">
+                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span id="statusText" class="text-slate-200">Starting extraction...</span>
+                </div>
+                <div class="text-indigo-400 font-bold">
+                    Extraction Progress: <span id="percentageText">0%</span>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                <div id="progressBar" class="bg-indigo-500 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+            </div>
+
+            <!-- Live Counter -->
+            <div class="flex justify-between items-center pt-2 border-t border-slate-700/50">
+                <span class="text-sm text-slate-400">Total Verified Contacts Found:</span>
+                <span id="liveContactCount" class="text-lg font-bold text-emerald-400">0</span>
             </div>
         </div>
 
@@ -77,7 +279,7 @@
                     <span class="text-sm text-slate-400">Total Verified Contacts Found: </span>
                     <span id="countBadge" class="text-lg font-bold text-emerald-400">0</span>
                 </div>
-                <a id="downloadLink" href="#" 
+                <a id="downloadLink" href="#"
                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     Download Excel (.xlsx)
@@ -106,14 +308,86 @@
 
     <!-- Frontend Script -->
     <script>
-        const form = document.getElementById('extractForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const statusBox = document.getElementById('statusBox');
-        const statusText = document.getElementById('statusText');
+        // ── Filter Panel Toggle ──────────────────────────────────────
+        const filterToggle  = document.getElementById('filterToggle');
+        const filterPanel   = document.getElementById('filterPanel');
+        const filterChevron = document.getElementById('filterChevron');
+        let panelOpen = false;
+
+        filterToggle.addEventListener('click', () => {
+            panelOpen = !panelOpen;
+            filterPanel.className = panelOpen ? 'expanded' : 'collapsed';
+            filterChevron.style.transform = panelOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+        });
+
+        // ── Year Presets ─────────────────────────────────────────────
+        function setYearPreset(from, to) {
+            document.getElementById('year_from').value = from;
+            document.getElementById('year_to').value   = to;
+            updateFilterTags();
+        }
+
+        // ── Clear individual filter groups ───────────────────────────
+        document.getElementById('clearCountries').addEventListener('click', () => {
+            document.querySelectorAll('.country-cb').forEach(cb => cb.checked = false);
+            updateFilterTags();
+        });
+        document.getElementById('clearYears').addEventListener('click', () => {
+            document.getElementById('year_from').value = '';
+            document.getElementById('year_to').value   = '';
+            updateFilterTags();
+        });
+        document.getElementById('clearTypes').addEventListener('click', () => {
+            document.querySelectorAll('.type-cb').forEach(cb => cb.checked = false);
+            updateFilterTags();
+        });
+        document.getElementById('clearFilters').addEventListener('click', () => {
+            document.querySelectorAll('.country-cb, .type-cb').forEach(cb => cb.checked = false);
+            document.getElementById('year_from').value = '';
+            document.getElementById('year_to').value   = '';
+            updateFilterTags();
+        });
+
+        // ── Live Filter Tags (show active selections as badge pills) ─
+        function updateFilterTags() {
+            const tagsDiv = document.getElementById('filterTags');
+            const clearBtn = document.getElementById('clearFilters');
+            tagsDiv.innerHTML = '';
+
+            const countries   = [...document.querySelectorAll('.country-cb:checked')].map(c => c.value);
+            const types       = [...document.querySelectorAll('.type-cb:checked')].map(c => c.value);
+            const yearFrom    = document.getElementById('year_from').value;
+            const yearTo      = document.getElementById('year_to').value;
+
+            if (countries.length) {
+                tagsDiv.innerHTML += `<span class="filter-tag">🌍 ${countries.join(', ')}</span>`;
+            }
+            if (yearFrom || yearTo) {
+                const label = yearFrom && yearTo ? `${yearFrom}–${yearTo}` : yearFrom ? `≥ ${yearFrom}` : `≤ ${yearTo}`;
+                tagsDiv.innerHTML += `<span class="filter-tag">📅 ${label}</span>`;
+            }
+            if (types.length) {
+                tagsDiv.innerHTML += `<span class="filter-tag">📄 ${types.join(', ')}</span>`;
+            }
+
+            const hasFilters = countries.length || types.length || yearFrom || yearTo;
+            clearBtn.classList.toggle('hidden', !hasFilters);
+        }
+
+        // Attach live update listeners
+        document.querySelectorAll('.country-cb, .type-cb').forEach(cb => cb.addEventListener('change', updateFilterTags));
+        document.getElementById('year_from').addEventListener('input', updateFilterTags);
+        document.getElementById('year_to').addEventListener('input', updateFilterTags);
+
+        // ── Main Form ────────────────────────────────────────────────
+        const form        = document.getElementById('extractForm');
+        const submitBtn   = document.getElementById('submitBtn');
+        const statusBox   = document.getElementById('statusBox');
+        const statusText  = document.getElementById('statusText');
         const resultsCard = document.getElementById('resultsCard');
-        const tableBody = document.getElementById('tableBody');
-        const countBadge = document.getElementById('countBadge');
-        const downloadLink = document.getElementById('downloadLink');
+        const tableBody   = document.getElementById('tableBody');
+        const countBadge  = document.getElementById('countBadge');
+        const downloadLink= document.getElementById('downloadLink');
 
         let pollInterval = null;
 
@@ -152,6 +426,10 @@
             }
         }
 
+        const progressBar       = document.getElementById('progressBar');
+        const percentageText    = document.getElementById('percentageText');
+        const liveContactCount  = document.getElementById('liveContactCount');
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -159,16 +437,17 @@
             resultsCard.classList.add('hidden');
             tableBody.innerHTML = '';
             statusText.textContent = 'Starting extraction...';
+            progressBar.style.width = '0%';
+            progressBar.classList.remove('bg-red-500');
+            progressBar.classList.add('bg-indigo-500');
+            percentageText.textContent = '0%';
+            liveContactCount.textContent = '0';
             setLoading(true);
 
             const formData = new FormData(form);
 
             try {
-                // STEP 1: Start background task — returns instantly with task_id
-                const startResp = await fetch('/start-extraction', {
-                    method: 'POST',
-                    body: formData
-                });
+                const startResp = await fetch('/start-extraction', { method: 'POST', body: formData });
                 const startData = await startResp.json();
 
                 if (startData.error) {
@@ -179,31 +458,37 @@
 
                 const taskId = startData.task_id;
 
-                // STEP 2: Poll /status/<task_id> every 3 seconds for live progress
                 pollInterval = setInterval(async () => {
                     try {
                         const statusResp = await fetch(`/status/${taskId}`);
                         const statusData = await statusResp.json();
 
-                        // Show the live progress message from backend
-                        if (statusData.progress) {
-                            statusText.textContent = statusData.progress;
-                        }
+                        if (statusData.progress) statusText.textContent = statusData.progress;
+                        
+                        // Update live progress and counter
+                        const pct = statusData.percentage || 0;
+                        progressBar.style.width = pct + '%';
+                        percentageText.textContent = pct + '%';
+                        
+                        const found = statusData.contacts_found || 0;
+                        liveContactCount.textContent = found;
 
                         if (statusData.status === 'done' || statusData.status === 'error') {
                             clearInterval(pollInterval);
                             pollInterval = null;
-
-                            // STEP 3: Fetch the final result
+                            
+                            if (statusData.status === 'error') {
+                                progressBar.classList.remove('bg-indigo-500');
+                                progressBar.classList.add('bg-red-500');
+                            }
+                            
                             const resultResp = await fetch(`/result/${taskId}`);
                             const result = await resultResp.json();
-
                             setLoading(false);
                             showResults(result);
                         }
                     } catch (pollErr) {
                         console.error('Polling error:', pollErr);
-                        // Keep polling — temporary network hiccup
                     }
                 }, 3000);
 
@@ -215,4 +500,4 @@
         });
     </script>
 </body>
-</html>
+</html>

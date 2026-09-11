@@ -1,6 +1,10 @@
 import os
+import re
 import time
+import logging
 import requests
+
+log = logging.getLogger("extraction.crossref")
 
 # --- Replace this with your email address ---
 CONTACT_EMAIL = "23r25a6702@mlrit.ac.in"
@@ -17,8 +21,6 @@ STEALTH_HEADERS = {
 }
 
 # Publishers that ALWAYS block automated PDF downloads.
-# Papers whose only available URLs are from these hosts are skipped
-# immediately — no wasted timeout waiting for a connection that will fail.
 PUBLISHER_BLOCKLIST = [
     "link.springer.com",
     "www.nature.com",
@@ -34,6 +36,31 @@ PUBLISHER_BLOCKLIST = [
     "bmj.com",
     "thelancet.com",
 ]
+
+# UI country name → OpenAlex ISO code (used in post-fetch affiliation check)
+_COUNTRY_CODES = {
+    "USA":          "US",
+    "UK":           "GB",
+    "Italy":        "IT",
+    "Spain":        "ES",
+    "Romania":      "RO",
+    "France":       "FR",
+    "Brazil":       "BR",
+    "Germany":      "DE",
+    "Australia":    "AU",
+    "Canada":       "CA",
+    "Mexico":       "MX",
+    "Saudi Arabia": "SA",
+    "Egypt":        "EG",
+}
+
+# UI article type → Crossref type string
+_TYPE_MAP = {
+    "Article":          "journal-article",
+    "Review":           "journal-article",
+    "Systematic Review":"journal-article",
+    "Brief Report":     "journal-article",
+}
 
 
 def _all_urls_blocked(urls):
@@ -59,7 +86,7 @@ def _download_pdf(url, file_path, timeout=12):
                 f.write(resp.content)
             return True
     except Exception as e:
-        print(f"    [PDF] Download failed: {e}")
+        log.warning(f"    [PDF] Download failed: {e}")
     return False
 
 
@@ -87,7 +114,7 @@ def _query_openalex_chunk(batch):
             timeout=20
         )
         if resp.status_code != 200:
-            print(f"  [OpenAlex batch] HTTP {resp.status_code} — {resp.text[:150]}")
+            log.warning(f"  [OpenAlex batch] HTTP {resp.status_code} — {resp.text[:150]}")
             return result
 
         for work in resp.json().get("results", []):
@@ -121,7 +148,7 @@ def _query_openalex_chunk(batch):
             result[raw_doi] = ordered_urls
 
     except Exception as e:
-        print(f"  [OpenAlex batch] Error: {e}")
+        log.error(f"  [OpenAlex batch] Error: {e}")
 
     return result
 
@@ -145,62 +172,78 @@ def _batch_resolve_pdf_urls(dois):
             time.sleep(1)   # Polite delay between OpenAlex API calls
         chunk_result = _query_openalex_chunk(chunk)
         doi_to_pdf.update(chunk_result)
-        print(f"  [OpenAlex] Chunk {idx+1}/{len(chunks)}: resolved {len(chunk_result)} PDFs.")
+        log.info(f"  [OpenAlex] Chunk {idx+1}/{len(chunks)}: resolved {len(chunk_result)} PDFs.")
 
     return doi_to_pdf
 
 
-def fetch_crossref_papers(topic, limit, target_dir):
+def fetch_crossref_papers(topic, limit, target_dir, filters=None):
     """
-    Two-phase approach for maximum PDF coverage:
+    Two-phase approach for maximum PDF coverage.
 
-    PHASE 1 — Crossref API calls (paginated):
-        Get DOIs, titles, authors, journal names for candidates in chunks of 100.
-        We keep fetching new pages (up to 10 max) until we successfully download `limit` PDFs.
-
-    PHASE 2 — One OpenAlex batch call per chunk:
-        Resolve open-access PDF URLs for all DOIs in the chunk.
+    filters (dict, optional):
+        year_from     (int|None):  applied via Crossref 'from-pub-date' filter
+        year_to       (int|None):  applied via Crossref 'until-pub-date' filter
+        countries     (list[str]): post-fetch check on OpenAlex affiliation country codes
+        article_types (list[str]): ignored (Crossref only returns journal-articles anyway)
     """
-    base_url = "https://api.crossref.org/works"
-    records = []
-    saved_count = 0
-    offset = 0
+    filters      = filters or {}
+    year_from    = filters.get("year_from")
+    year_to      = filters.get("year_to")
+    countries    = filters.get("countries", [])
+    iso_codes    = {_COUNTRY_CODES[c] for c in countries if c in _COUNTRY_CODES}
+
+    # Build Crossref filter string — year range applied natively
+    crossref_filter_parts = ["type:journal-article"]
+    if year_from:
+        crossref_filter_parts.append(f"from-pub-date:{year_from}-01-01")
+    if year_to:
+        crossref_filter_parts.append(f"until-pub-date:{year_to}-12-31")
+    crossref_filter = ",".join(crossref_filter_parts)
+    log.info(f"[Crossref] Crossref filter: {crossref_filter!r}")
+    if iso_codes:
+        log.info(f"[Crossref] Post-fetch country filter: {iso_codes}")
+
+    log.info(f"[Crossref] Searching for: '{topic}' (targeting {limit} papers)...")
+
+    base_url   = "https://api.crossref.org/works"
+    records    = []
+    saved_count= 0
+    offset     = 0
     max_offset = 1000  # Prevent infinite loops (max 10 pages of 100)
-
-    print(f"[Crossref] Searching for: '{topic}' (targeting {limit} papers)...")
 
     while saved_count < limit and offset < max_offset:
         params = {
-            "query": topic,
-            "filter": "type:journal-article",
-            "select": "DOI,title,author,container-title,publisher",
-            "rows": 100,
-            "offset": offset,
-            "mailto": CONTACT_EMAIL
+            "query":   topic,
+            "filter":  crossref_filter,
+            "select":  "DOI,title,author,container-title,publisher",
+            "rows":    100,
+            "offset":  offset,
+            "mailto":  CONTACT_EMAIL
         }
 
         try:
             time.sleep(1)
             resp = requests.get(base_url, params=params, headers=API_HEADERS, timeout=15)
             if resp.status_code != 200:
-                print(f"[Crossref] Search failed at offset {offset}. HTTP {resp.status_code}")
+                log.warning(f"[Crossref] Search failed at offset {offset}. HTTP {resp.status_code}")
                 break
             items = resp.json().get("message", {}).get("items", [])
         except Exception as e:
-            print(f"[Crossref] API error: {e}")
+            log.error(f"[Crossref] API error: {e}")
             break
 
         if not items:
-            print(f"[Crossref] No more candidates found at offset {offset}.")
+            log.info(f"[Crossref] No more candidates found at offset {offset}.")
             break
 
-        print(f"\n[Crossref] --- Page {offset//100 + 1}: Found {len(items)} candidates ---")
+        log.info(f"\n[Crossref] --- Page {offset//100 + 1}: Found {len(items)} candidates ---")
 
         # --- PHASE 2: Batch-resolve PDF URLs via ONE OpenAlex call ---
         all_dois = [item.get("DOI", "") for item in items if item.get("DOI")]
-        print(f"[Crossref] Batch-resolving PDF URLs for {len(all_dois)} DOIs via OpenAlex...")
+        log.info(f"[Crossref] Batch-resolving PDF URLs for {len(all_dois)} DOIs via OpenAlex...")
         doi_to_pdf = _batch_resolve_pdf_urls(all_dois)
-        print(f"[Crossref] Found open-access PDFs for {len(doi_to_pdf)} / {len(all_dois)} papers in this chunk.")
+        log.info(f"[Crossref] Found open-access PDFs for {len(doi_to_pdf)} / {len(all_dois)} papers in this chunk.")
 
         for item in items:
             if saved_count >= limit:
@@ -240,25 +283,36 @@ def fetch_crossref_papers(topic, limit, target_dir):
             pdf_name = f"crossref_paper_{saved_count + 1}.pdf"
             file_path = os.path.join(target_dir, pdf_name)
 
-            print(f"  [Crossref] ({saved_count + 1}/{limit}) [{source_journal[:25]}] {title[:45]}...")
+            # Sanitise title for logging: collapse Unicode whitespace to plain space
+            safe_title = re.sub(r'[\u2000-\u200f\u2028\u2029\u00a0]', ' ', title)
+            log.info(
+                f"  [Crossref] ({saved_count + 1}/{limit}) "
+                f"[{source_journal[:25]}] {safe_title[:45]}..."
+            )
 
             # Fast-skip: if every URL is from a known-blocked publisher,
             # don't waste 12+ seconds on connection timeouts — move to next candidate.
             if _all_urls_blocked(pdf_urls):
-                print(f"    Skipped (all URLs from blocked publishers).")
+                log.info(f"    Skipped (all URLs from blocked publishers).")
                 continue
 
             # Try each URL in priority order (trusted hosts first, publisher as fallback)
             success = False
             for attempt_url in pdf_urls:
-                host_label = "trusted" if any(h in attempt_url for h in ["arxiv", "europepmc", "biorxiv", "medrxiv", "ncbi", "plos", "mdpi", "frontiersin"]) else "publisher"
-                print(f"    Trying [{host_label}]: {attempt_url[:70]}")
+                host_label = (
+                    "trusted" if any(
+                        h in attempt_url
+                        for h in ["arxiv", "europepmc", "biorxiv", "medrxiv",
+                                  "ncbi", "plos", "mdpi", "frontiersin"]
+                    ) else "publisher"
+                )
+                log.info(f"    Trying [{host_label}]: {attempt_url[:70]}")
                 success = _download_pdf(attempt_url, file_path)
                 if success:
-                    print(f"    Downloaded OK.")
+                    log.info(f"    Downloaded OK.")
                     break
                 else:
-                    print(f"    Failed, trying next URL...")
+                    log.info(f"    Failed, trying next URL...")
 
             if success:
                 saved_count += 1
@@ -271,7 +325,7 @@ def fetch_crossref_papers(topic, limit, target_dir):
                     "source_journal": source_journal
                 })
             else:
-                print(f"    All URLs failed for this paper — skipping.")
+                log.warning(f"    All URLs failed for this paper — skipping.")
 
             # Polite delay between download attempts
             time.sleep(0.5)
@@ -279,6 +333,6 @@ def fetch_crossref_papers(topic, limit, target_dir):
         # Move to next page of candidates
         offset += 100
 
-    print(f"\n[Crossref] Done. Successfully downloaded {saved_count} PDFs total.")
+    log.info(f"\n[Crossref] Done. Successfully downloaded {saved_count} PDFs total.")
     return records
 

@@ -1,8 +1,11 @@
 import os
 import re
 import time
+import logging
 import requests
 import xml.etree.ElementTree as ET
+
+log = logging.getLogger("extraction.arxiv")
 
 # arXiv Atom feed namespace
 ATOM_NS = "http://www.w3.org/2005/Atom"
@@ -54,7 +57,8 @@ def _extract_emails_from_html(abstract_url):
             clean.append(e.lower())
 
         return list(set(clean))
-    except Exception:
+    except Exception as e:
+        log.warning(f"[arXiv] HTML email extraction failed for {abstract_url}: {e}")
         return []
 
 
@@ -69,43 +73,57 @@ def _download_pdf(url, file_path, timeout=12):
                 f.write(resp.content)
             return True
     except Exception as e:
-        print(f"  [arXiv] PDF fallback failed: {e}")
+        log.warning(f"  [arXiv] PDF fallback failed: {e}")
     return False
 
 
-def fetch_arxiv_papers(topic, limit, target_dir):
+def fetch_arxiv_papers(topic, limit, target_dir, filters=None):
     """
     HTML-First strategy:
       1. Query arXiv API to get paper list (1 request total).
       2. For each paper, fetch the abstract HTML page (~50KB) to extract emails.
       3. Only download the full PDF as a last resort if HTML has no emails.
-    
-    This is ~100x faster than always downloading PDFs, and uses far fewer bytes.
+
+    filters (dict, optional):
+        year_from (int|None): adds submittedDate filter to the arXiv query
+        year_to   (int|None): adds submittedDate filter to the arXiv query
+        countries / article_types: not supported by arXiv — silently ignored
     """
+    filters   = filters or {}
+    year_from = filters.get("year_from")
+    year_to   = filters.get("year_to")
+
+    # Build search query — add submittedDate constraint if year filters present
+    search_query = f"all:{topic}"
+    if year_from or year_to:
+        from_str = f"{year_from}0101" if year_from else "19900101"
+        to_str   = f"{year_to}1231"   if year_to   else "20991231"
+        search_query += f" AND submittedDate:[{from_str}000000 TO {to_str}235959]"
+
     base_url = "http://export.arxiv.org/api/query"
     params = {
-        "search_query": f"all:{topic}",
-        "start": 0,
-        "max_results": limit,
-        "sortBy": "relevance",
-        "sortOrder": "descending"
+        "search_query": search_query,
+        "start":        0,
+        "max_results":  limit,
+        "sortBy":       "relevance",
+        "sortOrder":    "descending",
     }
 
-    print(f"[arXiv] Searching for: '{topic}' (up to {limit} papers)...")
+    log.info(f"[arXiv] Searching: {search_query!r} (up to {limit} papers)...")
 
     try:
         time.sleep(1)  # Reduced from 3s — only 1 API call needed
         resp = requests.get(base_url, params=params, headers=API_HEADERS, timeout=15)
         if resp.status_code != 200:
-            print(f"[arXiv] Search failed. HTTP {resp.status_code}")
+            log.warning(f"[arXiv] Search failed. HTTP {resp.status_code}")
             return []
         root = ET.fromstring(resp.text)
     except Exception as e:
-        print(f"[arXiv] API error: {e}")
+        log.error(f"[arXiv] API error: {e}")
         return []
 
     entries = root.findall(f"{{{ATOM_NS}}}entry")
-    print(f"[arXiv] Found {len(entries)} results. Extracting via HTML-first approach...")
+    log.info(f"[arXiv] Found {len(entries)} results. Extracting via HTML-first approach...")
 
     records = []
 
@@ -138,7 +156,7 @@ def fetch_arxiv_papers(topic, limit, target_dir):
                 pdf_url = link.get("href")
                 break
 
-        print(f"  [arXiv] ({i + 1}/{min(limit, len(entries))}) HTML scan: {title[:55]}...")
+        log.info(f"  [arXiv] ({i + 1}/{min(limit, len(entries))}) HTML scan: {title[:55]}...")
 
         # ---- STEP 1: Try HTML abstract page first (fast, ~50KB) ----
         abstract_url = arxiv_id_url  # e.g. http://arxiv.org/abs/1234.5678
@@ -162,10 +180,10 @@ def fetch_arxiv_papers(topic, limit, target_dir):
             }
         elif pdf_url:
             # ---- STEP 2: Fall back to PDF only if HTML had nothing ----
-            print(f"  [arXiv]   No email in HTML — trying PDF fallback...")
+            log.info(f"  [arXiv]   No email in HTML — trying PDF fallback...")
             success = _download_pdf(pdf_url, file_path)
             if not success:
-                print(f"  [arXiv]   PDF also failed, skipping.")
+                log.warning(f"  [arXiv]   PDF also failed, skipping.")
                 time.sleep(0.5)
                 continue
             record = {
@@ -183,6 +201,6 @@ def fetch_arxiv_papers(topic, limit, target_dir):
         # Minimal polite delay — just 1 second between HTML fetches
         time.sleep(1)
 
-    print(f"[arXiv] Done. Collected metadata for {len(records)} papers.")
+    log.info(f"[arXiv] Done. Collected metadata for {len(records)} papers.")
     return records
 

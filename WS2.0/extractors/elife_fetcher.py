@@ -1,17 +1,54 @@
 import os
+import logging
 import requests
 
-def fetch_elife_papers(topic, limit, target_dir):
-    """Searches and downloads PDFs exclusively from eLife."""
+log = logging.getLogger("extraction.elife")
+
+# eLife article type mapping
+_ELIFE_TYPE_MAP = {
+    "Article":          "research-article",
+    "Review":           "review-article",
+    "Systematic Review":"review-article",
+    "Brief Report":     "short-report",
+}
+
+
+def fetch_elife_papers(topic, limit, target_dir, filters=None):
+    """Searches and downloads PDFs exclusively from eLife.
+
+    filters (dict, optional):
+        year_from     (int|None):  mapped to start-date in eLife API
+        year_to       (int|None):  mapped to end-date in eLife API
+        article_types (list[str]): mapped to type[] eLife API params
+        countries: not supported by eLife API — silently ignored
+    """
+    filters       = filters or {}
+    year_from     = filters.get("year_from")
+    year_to       = filters.get("year_to")
+    article_types = filters.get("article_types", [])
+
     base_url = "https://api.elifesciences.org/search"
     params = {
-        "for": topic,
-        "page": 1,
+        "for":      topic,
+        "page":     1,
         "per-page": limit,
-        "sort": "relevance",
-        "type[]": "research-article"
+        "sort":     "relevance",
     }
+
+    # Map UI types to eLife type strings (deduplicate)
+    elife_types = list({_ELIFE_TYPE_MAP[t] for t in article_types if t in _ELIFE_TYPE_MAP})
+    if elife_types:
+        params["type[]"] = elife_types
+    else:
+        params["type[]"] = "research-article"  # Default: research articles only
+
+    if year_from:
+        params["start-date"] = f"{year_from}-01-01"
+    if year_to:
+        params["end-date"]   = f"{year_to}-12-31"
+
     headers = {"Accept": "application/vnd.elife.search+json;version=2"}
+    log.info(f"[eLife] Params: {params}")
     
     try:
         resp = requests.get(base_url, params=params, headers=headers, timeout=25)
@@ -19,7 +56,7 @@ def fetch_elife_papers(topic, limit, target_dir):
             return []
         items = resp.json().get("items", [])
     except Exception as e:
-        print(f"eLife API error: {e}")
+        log.error(f"[eLife] API error: {e}")
         return []
 
     records = []
@@ -57,7 +94,8 @@ def fetch_elife_papers(topic, limit, target_dir):
                     "authors": authors_meta,
                     "doi": doi
                 })
-        except Exception:
+        except Exception as e:
+            log.warning(f"[eLife] PDF download failed for article {article_id}: {e}")
             continue
             
     return records

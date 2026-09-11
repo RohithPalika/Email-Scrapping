@@ -1,31 +1,99 @@
 import os
 import time
+import logging
 import requests
 
-def fetch_openalex_papers(topic, limit, target_dir):
+log = logging.getLogger("extraction.openalex")
+
+# Country name → ISO alpha-2 code (OpenAlex uses these codes)
+_COUNTRY_CODES = {
+    "USA":          "US",
+    "UK":           "GB",
+    "Italy":        "IT",
+    "Spain":        "ES",
+    "Romania":      "RO",
+    "France":       "FR",
+    "Brazil":       "BR",
+    "Germany":      "DE",
+    "Australia":    "AU",
+    "Canada":       "CA",
+    "Mexico":       "MX",
+    "Saudi Arabia": "SA",
+    "Egypt":        "EG",
+}
+
+# Article type name → OpenAlex type string
+_TYPE_MAP = {
+    "Article":          "article",
+    "Review":           "review",
+    "Systematic Review":"review",
+    "Brief Report":     "article",
+}
+
+
+def fetch_openalex_papers(topic, limit, target_dir, filters=None):
     """
     Searches and downloads Open Access PDFs from OpenAlex REST API.
+
+    filters (dict, optional):
+        countries     (list[str]): UI country names, mapped to ISO codes
+        year_from     (int|None):  publication year ≥ this
+        year_to       (int|None):  publication year ≤ this
+        article_types (list[str]): article type labels mapped to OpenAlex types
     """
+    filters = filters or {}
     base_url = "https://api.openalex.org/works"
+
+    # --- Build filter string ---
+    api_filters = ["has_oa_accepted_or_published_version:true", "is_oa:true"]
+
+    # Year range
+    year_from = filters.get("year_from")
+    year_to   = filters.get("year_to")
+    if year_from and year_to:
+        api_filters.append(f"publication_year:{year_from}-{year_to}")
+    elif year_from:
+        api_filters.append(f"publication_year:>{year_from - 1}")
+    elif year_to:
+        api_filters.append(f"publication_year:<{year_to + 1}")
+
+    # Countries — map UI names to ISO codes, join with |  (OR logic)
+    countries = filters.get("countries", [])
+    iso_codes = [_COUNTRY_CODES[c] for c in countries if c in _COUNTRY_CODES]
+    if iso_codes:
+        api_filters.append("institutions.country_code:" + "|".join(iso_codes))
+
+    # Article types — map UI names to OpenAlex types, join with |  (OR logic)
+    article_types = filters.get("article_types", [])
+    oa_types = list({_TYPE_MAP[t] for t in article_types if t in _TYPE_MAP})
+    if oa_types:
+        api_filters.append("type:" + "|".join(oa_types))
+
+    filter_str = ",".join(api_filters)
+    log.info(f"[OpenAlex] filter={filter_str!r}")
+
     params = {
-        "search": topic,
-        "filter": "has_oa_accepted_or_published_version:true,is_oa:true",
-        "per-page": limit * 2,  # Fetch extra to handle direct PDF access fallbacks
-        "sort": "relevance_score:desc"
+        "search":    topic,
+        "filter":    filter_str,
+        "per-page":  limit * 2,   # Fetch extra to handle direct PDF access fallbacks
+        "sort":      "relevance_score:desc",
+        "mailto":    "23r25a6702@mlrit.ac.in",
     }
-    
+
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 (mailto:researcher@example.com)"
+        "User-Agent": "AcademicEmailExtractor/1.0 (Research Outreach Tool; mailto:23r25a6702@mlrit.ac.in)"
     }
-    
+
     try:
         resp = requests.get(base_url, params=params, headers=headers, timeout=25)
         if resp.status_code != 200:
+            log.error(f"[OpenAlex] API error: HTTP {resp.status_code} — {resp.text[:120]}")
             return []
         items = resp.json().get("results", [])
+        log.info(f"[OpenAlex] Got {len(items)} candidates.")
         time.sleep(1)  # Polite delay after API call
     except Exception as e:
-        print(f"OpenAlex API error: {e}")
+        log.error(f"[OpenAlex] API error: {e}")
         return []
 
     records = []
@@ -36,33 +104,27 @@ def fetch_openalex_papers(topic, limit, target_dir):
             break
 
         title = item.get("display_name") or item.get("title") or "Untitled"
-        doi = item.get("doi") or "N/A"
-        
+        doi   = item.get("doi") or "N/A"
+
         # Extract authors list
         authors_meta = []
-        authorships = item.get("authorships", [])
-        for a in authorships:
-            author_obj = a.get("author", {})
-            name = author_obj.get("display_name")
+        for a in item.get("authorships", []):
+            name = (a.get("author") or {}).get("display_name")
             if name:
                 authors_meta.append(name.strip())
 
-        # Extract direct PDF URLs
+        # Collect all PDF URLs (best_oa_location first, then all locations)
         pdf_urls = []
         best_oa = item.get("best_oa_location") or {}
-        primary_loc = item.get("primary_location") or {}
-
         if best_oa.get("pdf_url"):
             pdf_urls.append(best_oa["pdf_url"])
+        primary_loc = item.get("primary_location") or {}
         if primary_loc.get("pdf_url") and primary_loc["pdf_url"] not in pdf_urls:
             pdf_urls.append(primary_loc["pdf_url"])
-            
-        # Additional locations
-        locations = item.get("locations", [])
-        for loc in locations:
-            pdf_u = loc.get("pdf_url")
-            if pdf_u and pdf_u not in pdf_urls:
-                pdf_urls.append(pdf_u)
+        for loc in item.get("locations", []):
+            u = loc.get("pdf_url")
+            if u and u not in pdf_urls:
+                pdf_urls.append(u)
 
         if not pdf_urls:
             continue
@@ -74,30 +136,30 @@ def fetch_openalex_papers(topic, limit, target_dir):
         for url in pdf_urls:
             try:
                 pdf_resp = requests.get(url, headers=headers, timeout=25, allow_redirects=True)
-                if pdf_resp.status_code == 200 and (pdf_resp.content.startswith(b"%PDF") or b"%PDF-" in pdf_resp.content[:1024]):
+                if pdf_resp.status_code == 200 and (
+                    pdf_resp.content.startswith(b"%PDF") or b"%PDF-" in pdf_resp.content[:1024]
+                ):
                     with open(file_path, "wb") as f:
                         f.write(pdf_resp.content)
                     download_success = True
                     break
-            except Exception:
-                continue
+            except Exception as e:
+                log.warning(f"[OpenAlex] PDF download failed ({url}): {e}")
 
         if download_success:
             saved_count += 1
-            # Extract journal/source name for the Source Journal column
             source_journal = "OpenAlex"
-            primary_loc = item.get("primary_location") or {}
-            source_obj = primary_loc.get("source") or {}
-            if source_obj.get("display_name"):
-                source_journal = source_obj["display_name"]
+            src_obj = (item.get("primary_location") or {}).get("source") or {}
+            if src_obj.get("display_name"):
+                source_journal = src_obj["display_name"]
             records.append({
-                "file_path": file_path,
-                "pdf_name": pdf_name,
-                "title": title,
-                "authors": authors_meta,
-                "doi": doi,
-                "source_journal": source_journal
+                "file_path":     file_path,
+                "pdf_name":      pdf_name,
+                "title":         title,
+                "authors":       authors_meta,
+                "doi":           doi,
+                "source_journal": source_journal,
             })
             time.sleep(1)  # Polite delay between downloads
 
-    return records
+    return records

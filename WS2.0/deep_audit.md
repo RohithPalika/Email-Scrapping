@@ -14,7 +14,7 @@ This is a **Flask-based web application** whose core purpose is:
 **Source sites currently supported:**
 
 | Key | Fetcher | Strategy |
-|---|---|---|
+|---|---|---| 
 | `plos` | `plos_fetcher.py` | Searches PLOS API → downloads PDF directly |
 | `elife` | `elife_fetcher.py` | Searches eLife API → downloads PDF |
 | `europepmc` | `europepmc_fetcher.py` | Searches EuropePMC API → downloads PDF |

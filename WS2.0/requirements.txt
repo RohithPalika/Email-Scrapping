@@ -3,3 +3,4 @@ pdfplumber
 pandas
 openpyxl
 requests
+beautifulsoup4

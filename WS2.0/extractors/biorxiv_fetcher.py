@@ -1,6 +1,9 @@
 import os
 import time
+import logging
 import requests
+
+log = logging.getLogger("extraction.biorxiv")
 
 # Polite headers for APIs
 API_HEADERS = {
@@ -29,53 +32,69 @@ def _download_pdf_with_retry(url, file_path, retries=1, timeout=10, delay=1):
                     f.write(resp.content)
                 return True
         except Exception as e:
-            print(f"  [bioRxiv] Download failed (timeout/block): {e}")
+            log.warning(f"  [bioRxiv] Download failed (timeout/block): {e}")
 
         time.sleep(delay)
 
     return False
 
 
-def fetch_biorxiv_papers(topic, limit, target_dir):
+def fetch_biorxiv_papers(topic, limit, target_dir, filters=None):
     """
     Searches and downloads PDFs from bioRxiv AND medRxiv.
     Uses Crossref (with prefix:10.1101) to find relevant preprints by topic,
     then constructs direct PDF links and tries both servers.
+
+    filters (dict, optional):
+        year_from (int|None): applied as from-pub-date in Crossref filter
+        year_to   (int|None): applied as until-pub-date in Crossref filter
+        countries / article_types: not supported by bioRxiv — silently ignored
     """
+    filters     = filters or {}
+    year_from   = filters.get("year_from")
+    year_to     = filters.get("year_to")
+
+    # Build Crossref date filter
+    # Default: 2020 onwards (bioRxiv is a preprint server — older content is rare)
+    from_date = f"{year_from}-01-01" if year_from else "2020-01-01"
+    until_date= f"{year_to}-12-31"   if year_to   else "2099-12-31"
+    crossref_filter = f"type:posted-content,from-pub-date:{from_date},until-pub-date:{until_date},prefix:10.1101"
+
     records = []
     saved_count = 0
     offset = 0
     max_offset = 1000
 
-    print(f"[bioRxiv/medRxiv] Searching for: '{topic}' (targeting {limit} papers)...")
+    log.info(f"[bioRxiv/medRxiv] Searching for: '{topic}' (targeting {limit} papers)...")
+    log.info(f"[bioRxiv/medRxiv] Crossref filter: {crossref_filter!r}")
 
     while saved_count < limit and offset < max_offset:
         crossref_url = "https://api.crossref.org/works"
         params = {
-            "query": topic,
-            "filter": "type:posted-content,from-pub-date:2020-01-01,prefix:10.1101",
-            "select": "DOI,title,author,published",
-            "rows": min(100, (limit - saved_count) * 2),  # Fetch extra to account for failures
-            "offset": offset,
-            "mailto": "23r25a6702@mlrit.ac.in"
+            "query":   topic,
+            "filter":  crossref_filter,
+            "select":  "DOI,title,author,published",
+            "rows":    min(100, (limit - saved_count) * 2),
+            "offset":  offset,
+            "mailto":  "23r25a6702@mlrit.ac.in"
         }
 
         try:
             time.sleep(1)
             resp = requests.get(crossref_url, params=params, headers=API_HEADERS, timeout=15)
             if resp.status_code != 200:
-                print(f"[bioRxiv/medRxiv] Search failed. HTTP {resp.status_code}")
+                log.warning(f"[bioRxiv/medRxiv] Search failed. HTTP {resp.status_code}")
                 break
             items = resp.json().get("message", {}).get("items", [])
         except Exception as e:
-            print(f"[bioRxiv/medRxiv] API error: {e}")
+            log.error(f"[bioRxiv/medRxiv] API error: {e}")
             break
 
         if not items:
-            print(f"[bioRxiv/medRxiv] No more candidates found at offset {offset}.")
+            log.info(f"[bioRxiv/medRxiv] No more candidates found at offset {offset}.")
             break
 
-        print(f"  [bioRxiv/medRxiv] Found {len(items)} candidates at offset {offset}. Downloading PDFs...")
+        log.info(f"  [bioRxiv/medRxiv] Found {len(items)} candidates at offset {offset}. Downloading PDFs...")
 
         for item in items:
             if saved_count >= limit:
@@ -100,7 +119,7 @@ def fetch_biorxiv_papers(topic, limit, target_dir):
             pdf_name = f"biorxiv_paper_{saved_count + 1}.pdf"
             file_path = os.path.join(target_dir, pdf_name)
             
-            print(f"    ({saved_count + 1}/{limit}) {title[:50]}...")
+            log.info(f"    ({saved_count + 1}/{limit}) {title[:50]}...")
             
             # Since both use the 10.1101 prefix, a paper could be on either server.
             # We try biorxiv first, then medrxiv if it fails (404).
@@ -124,12 +143,12 @@ def fetch_biorxiv_papers(topic, limit, target_dir):
                     "source_journal": server.capitalize()
                 })
             else:
-                print(f"      -> Skipped (not found on either server or download failed).")
+                log.warning(f"      -> Skipped (not found on either server or download failed).")
 
             # Polite 1-second delay between each paper
             time.sleep(1)
             
         offset += params["rows"]
 
-    print(f"[bioRxiv/medRxiv] Done. Successfully downloaded {saved_count} PDFs.")
+    log.info(f"[bioRxiv/medRxiv] Done. Successfully downloaded {saved_count} PDFs.")
     return records
