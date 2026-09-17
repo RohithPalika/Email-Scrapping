@@ -1,0 +1,17 @@
+# Python cache & build files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Logs & temp files
+*.log
+WS2.0/extraction.log
+WS2.0/downloads/extraction.lock
+WS2.0/downloads/*.xlsx
+WS2.0/downloads/*.csv

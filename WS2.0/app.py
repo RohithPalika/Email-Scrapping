@@ -1,10 +1,17 @@
 import os
+import sys
 import re
 import time
 import uuid
 import threading
 import logging
+import webbrowser
 from logging.handlers import RotatingFileHandler
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 import pdfplumber
 import pandas as pd
 from flask import Flask, render_template, request, send_file, jsonify
@@ -17,7 +24,6 @@ from extractors.europepmc_fetcher import fetch_europepmc_papers
 # New extractors
 from extractors.imedpub_fetcher import fetch_imedpub_papers
 from extractors.openalex_fetcher import fetch_openalex_papers
-from extractors.sciencedirect_fetcher import fetch_sciencedirect_papers
 
 # API-based fetchers
 from extractors.arxiv_fetcher import fetch_arxiv_papers
@@ -519,7 +525,6 @@ SOURCE_FETCHERS = {
     "arxiv":     ("arXiv",                  fetch_arxiv_papers),
     "biorxiv":   ("bioRxiv / medRxiv",     fetch_biorxiv_papers),
     "crossref":  ("Crossref (Multi-Server)", fetch_crossref_papers),
-    "sciencedirect": ("ScienceDirect (Elsevier)", fetch_sciencedirect_papers),
 }
 
 
@@ -850,5 +855,16 @@ def download_excel(filename):
     return "File not found", 404
 
 
+def _open_browser():
+    """Wait briefly for Flask to bind to port 5000, then launch default browser."""
+    time.sleep(1.2)
+    webbrowser.open("http://127.0.0.1:5000")
+
+
 if __name__ == "__main__":
+    # When Flask debug reloader is enabled, prevent opening two browser tabs
+    if not os.environ.get("WERKZEUG_RUN_MAIN"):
+        threading.Thread(target=_open_browser, daemon=True).start()
+
     app.run(debug=True, port=5000)
+

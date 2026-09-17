@@ -1131,3 +1131,276 @@ IndexError: string index out of range
 2026-09-11 10:09:35 [INFO] extraction: [Task 92f387da] Done. 15 rows written to arxiv_hiv_authors.xlsx
 2026-09-11 10:09:35 [INFO] werkzeug: 127.0.0.1 - - [11/Sep/2026 10:09:35] "GET /status/92f387da-7940-4301-807d-11259427fdae HTTP/1.1" 200 -
 2026-09-11 10:09:35 [INFO] werkzeug: 127.0.0.1 - - [11/Sep/2026 10:09:35] "GET /result/92f387da-7940-4301-807d-11259427fdae HTTP/1.1" 200 -
+2026-09-15 11:54:45 [INFO] werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-09-15 11:54:45 [INFO] werkzeug: [33mPress CTRL+C to quit[0m
+2026-09-15 11:54:46 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-15 11:54:47 [WARNING] werkzeug:  * Debugger is active!
+2026-09-15 11:54:47 [INFO] werkzeug:  * Debugger PIN: 648-202-228
+2026-09-15 11:57:08 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:08] "GET / HTTP/1.1" 200 -
+2026-09-15 11:57:09 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:09] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-09-15 11:57:40 [INFO] extraction: [Task ee56f219] Queued: source=plos, topic='Brain Tumor', max=10, filters={'countries': ['Italy', 'UK'], 'year_from': 2023, 'year_to': 2026, 'article_types': ['Article']}
+2026-09-15 11:57:40 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:40] "POST /start-extraction HTTP/1.1" 200 -
+2026-09-15 11:57:40 [INFO] werkzeug:  * Detected change in 'C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\encodings\\utf_8_sig.py', reloading
+2026-09-15 11:57:40 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-15 11:57:42 [WARNING] werkzeug:  * Debugger is active!
+2026-09-15 11:57:42 [INFO] werkzeug:  * Debugger PIN: 648-202-228
+2026-09-15 11:57:43 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:43] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:57:47 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:47] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:57:50 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:50] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:57:53 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:53] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:57:55 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:55] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:57:58 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:57:58] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:01 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:01] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:04 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:04] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:07 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:07] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:10 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:10] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:13 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:13] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:16 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:16] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:19 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:19] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:22 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:22] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:25 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:25] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:28 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:28] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:31 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:31] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:34 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:34] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:37 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:37] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:40 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:40] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:43 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:43] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:46 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:46] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:49 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:49] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:52 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:52] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:55 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:55] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:58:58 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:58:58] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:01 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:01] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:04 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:04] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:07 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:07] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:10 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:10] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:13 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:13] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:16 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:16] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:19 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:19] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:22 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:22] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:25 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:25] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:28 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:28] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:31 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:31] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:34 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:34] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:37 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:37] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:40 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:40] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:43 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:43] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:46 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:46] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:49 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:49] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:52 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:52] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:55 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:55] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 11:59:58 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 11:59:58] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:01 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:01] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:04 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:04] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:07 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:07] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:10 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:10] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:13 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:13] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:16 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:16] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:19 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:19] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:22 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:22] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:25 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:25] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:28 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:28] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:31 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:31] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:34 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:34] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:37 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:37] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:40 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:40] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:43 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:43] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:46 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:46] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:49 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:49] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:52 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:52] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:55 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:55] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:00:58 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:00:58] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:01 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:01] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:04 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:04] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:07 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:07] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:10 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:10] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:13 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:13] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:16 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:16] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:19 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:19] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:22 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:22] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:25 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:25] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:28 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:28] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:31 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:31] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:34 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:34] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:37 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:37] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:41 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:41] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:43 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:43] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:01:47 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:01:47] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:05 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:05] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:07 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:07] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:10 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:10] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:14 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:14] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:16 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:16] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:19 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:19] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:22 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:22] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:25 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:25] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:28 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:28] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:31 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:31] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:34 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:34] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:37 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:37] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:40 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:40] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:43 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:43] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:46 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:46] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:49 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:49] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:52 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:52] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:55 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:55] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:04:58 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:04:58] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:01 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:01] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:04 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:04] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:07 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:07] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:10 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:10] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:13 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:13] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:16 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:16] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:19 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:19] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:22 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:22] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:25 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:25] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:28 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:28] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:31 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:31] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:34 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:34] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:37 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:37] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:40 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:40] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:43 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:43] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:46 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:46] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:49 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:49] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:52 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:52] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:55 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:55] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:05:58 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:05:58] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:01 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:01] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:04 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:04] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:07 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:07] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:10 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:10] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:13 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:13] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:16 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:16] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:19 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:19] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:22 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:22] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:25 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:25] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:28 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:28] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:31 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:31] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:34 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:34] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:37 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:37] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:40 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:40] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:43 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:43] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:46 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:46] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:49 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:49] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:52 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:52] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:55 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:55] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:06:58 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:06:58] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:07:01 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:07:01] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:07:04 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:07:04] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:07:07 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:07:07] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:07:11 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:07:11] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:07:13 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:07:13] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:11 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:11] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:13 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:13] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:17 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:17] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:20 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:20] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:23 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:23] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:26 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:26] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:29 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:29] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:32 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:32] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:35 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:35] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:38 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:38] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:41 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:41] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:44 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:44] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:47 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:47] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:50 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:50] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:53 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:53] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:56 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:56] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:09:59 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:09:59] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:10:02 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:10:02] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:10:05 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:10:05] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:10:08 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:10:08] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:10:11 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:10:11] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:10:14 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:10:14] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:11:03 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:11:03] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:12:03 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:12:03] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:14:17 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:14:17] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:15:03 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:15:03] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:16:03 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:16:03] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:17:03 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:17:03] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:21:39 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:21:39] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:30:40 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:30:40] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 12:31:03 [INFO] werkzeug: 127.0.0.1 - - [15/Sep/2026 12:31:03] "[33mGET /status/ee56f219-73fc-46bd-b311-e0757beeebcb HTTP/1.1[0m" 404 -
+2026-09-15 14:02:14 [INFO] werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-09-15 14:02:14 [INFO] werkzeug: [33mPress CTRL+C to quit[0m
+2026-09-15 14:02:14 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-15 14:02:16 [WARNING] werkzeug:  * Debugger is active!
+2026-09-15 14:02:16 [INFO] werkzeug:  * Debugger PIN: 648-202-228
+2026-09-16 10:18:24 [INFO] werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-09-16 10:18:24 [INFO] werkzeug: [33mPress CTRL+C to quit[0m
+2026-09-16 10:18:24 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-16 10:18:25 [WARNING] werkzeug:  * Debugger is active!
+2026-09-16 10:18:25 [INFO] werkzeug:  * Debugger PIN: 470-509-254
+2026-09-16 10:19:51 [INFO] werkzeug: 127.0.0.1 - - [16/Sep/2026 10:19:51] "GET / HTTP/1.1" 200 -
+2026-09-16 10:19:51 [INFO] werkzeug: 127.0.0.1 - - [16/Sep/2026 10:19:51] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-09-16 10:27:55 [INFO] werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-09-16 10:27:55 [INFO] werkzeug: [33mPress CTRL+C to quit[0m
+2026-09-16 10:27:55 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-16 10:27:56 [WARNING] werkzeug:  * Debugger is active!
+2026-09-16 10:27:56 [INFO] werkzeug:  * Debugger PIN: 470-509-254
+2026-09-16 10:27:57 [INFO] werkzeug: 127.0.0.1 - - [16/Sep/2026 10:27:57] "GET / HTTP/1.1" 200 -
+2026-09-16 10:56:20 [INFO] werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-09-16 10:56:20 [INFO] werkzeug: [33mPress CTRL+C to quit[0m
+2026-09-16 10:56:20 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-16 10:56:21 [WARNING] werkzeug:  * Debugger is active!
+2026-09-16 10:56:21 [INFO] werkzeug:  * Debugger PIN: 470-509-254
+2026-09-16 10:56:21 [INFO] werkzeug: 127.0.0.1 - - [16/Sep/2026 10:56:21] "GET / HTTP/1.1" 200 -
+2026-09-16 11:00:51 [INFO] werkzeug:  * Detected change in 'C:\\Users\\HP\\Email-Scraping\\WS2.0\\extractors\\sciencedirect_fetcher.py', reloading
+2026-09-16 11:00:52 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-16 11:03:13 [INFO] werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-09-16 11:03:13 [INFO] werkzeug: [33mPress CTRL+C to quit[0m
+2026-09-16 11:03:13 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-16 11:03:14 [WARNING] werkzeug:  * Debugger is active!
+2026-09-16 11:03:14 [INFO] werkzeug:  * Debugger PIN: 470-509-254
+2026-09-16 11:03:14 [INFO] werkzeug: 127.0.0.1 - - [16/Sep/2026 11:03:14] "GET / HTTP/1.1" 200 -
+2026-09-16 15:06:36 [INFO] werkzeug:  * Detected change in 'C:\\Users\\HP\\Email-Scraping\\WS2.0\\app.py', reloading
+2026-09-16 15:06:37 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-16 15:06:43 [WARNING] werkzeug:  * Debugger is active!
+2026-09-16 15:06:43 [INFO] werkzeug:  * Debugger PIN: 470-509-254
+2026-09-16 17:36:03 [INFO] werkzeug:  * Detected change in 'C:\\Users\\HP\\Email-Scraping\\WS2.0\\extractors\\arxiv_fetcher.py', reloading
+2026-09-16 17:36:04 [INFO] werkzeug:  * Restarting with watchdog (windowsapi)
+2026-09-16 17:36:21 [WARNING] werkzeug:  * Debugger is active!
+2026-09-16 17:36:21 [INFO] werkzeug:  * Debugger PIN: 470-509-254
+2026-09-17 10:15:03 [INFO] werkzeug: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+2026-09-17 10:15:03 [INFO] werkzeug: Press CTRL+C to quit
+2026-09-17 10:15:03 [INFO] werkzeug:  * Restarting with stat
+2026-09-17 10:15:04 [WARNING] werkzeug:  * Debugger is active!
+2026-09-17 10:15:04 [INFO] werkzeug:  * Debugger PIN: 138-896-067
+2026-09-17 10:15:05 [INFO] werkzeug: 127.0.0.1 - - [17/Sep/2026 10:15:05] "GET / HTTP/1.1" 200 -
+2026-09-17 10:15:05 [INFO] werkzeug: 127.0.0.1 - - [17/Sep/2026 10:15:05] "GET /favicon.ico HTTP/1.1" 404 -
+2026-09-17 10:21:46 [INFO] werkzeug: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+2026-09-17 10:21:46 [INFO] werkzeug: Press CTRL+C to quit
+2026-09-17 10:21:46 [INFO] werkzeug:  * Restarting with stat
+2026-09-17 10:21:47 [WARNING] werkzeug:  * Debugger is active!
+2026-09-17 10:21:47 [INFO] werkzeug:  * Debugger PIN: 138-896-067
+2026-09-17 10:21:48 [INFO] werkzeug: 127.0.0.1 - - [17/Sep/2026 10:21:48] "GET / HTTP/1.1" 200 -
+2026-09-17 10:21:49 [INFO] werkzeug: 127.0.0.1 - - [17/Sep/2026 10:21:49] "GET /static/favicon.ico HTTP/1.1" 200 -
+2026-09-17 10:22:39 [INFO] werkzeug: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+2026-09-17 10:22:39 [INFO] werkzeug: Press CTRL+C to quit
+2026-09-17 10:22:39 [INFO] werkzeug:  * Restarting with stat
+2026-09-17 10:22:40 [WARNING] werkzeug:  * Debugger is active!
+2026-09-17 10:22:40 [INFO] werkzeug:  * Debugger PIN: 138-896-067
+2026-09-17 10:22:40 [INFO] werkzeug: 127.0.0.1 - - [17/Sep/2026 10:22:40] "GET / HTTP/1.1" 200 -
+2026-09-17 12:25:39 [INFO] werkzeug: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+2026-09-17 12:25:39 [INFO] werkzeug: Press CTRL+C to quit
+2026-09-17 12:25:39 [INFO] werkzeug:  * Restarting with stat
+2026-09-17 12:25:40 [WARNING] werkzeug:  * Debugger is active!
+2026-09-17 12:25:40 [INFO] werkzeug:  * Debugger PIN: 138-896-067
+2026-09-17 12:25:41 [INFO] werkzeug: 127.0.0.1 - - [17/Sep/2026 12:25:41] "GET / HTTP/1.1" 200 -
+2026-09-17 14:33:27 [INFO] werkzeug: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+2026-09-17 14:33:27 [INFO] werkzeug: Press CTRL+C to quit
+2026-09-17 14:33:27 [INFO] werkzeug:  * Restarting with stat
+2026-09-17 14:33:28 [WARNING] werkzeug:  * Debugger is active!
+2026-09-17 14:33:28 [INFO] werkzeug:  * Debugger PIN: 138-896-067
+2026-09-17 14:33:28 [INFO] werkzeug: 127.0.0.1 - - [17/Sep/2026 14:33:28] "GET / HTTP/1.1" 200 -
