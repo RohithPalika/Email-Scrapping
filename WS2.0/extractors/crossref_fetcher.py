@@ -59,6 +59,8 @@ _TYPE_MAP = {
     "Article":          "journal-article",
     "Review":           "journal-article",
     "Systematic Review":"journal-article",
+    "Case Reports":     "journal-article",
+    "Case Report":      "journal-article",
     "Brief Report":     "journal-article",
 }
 

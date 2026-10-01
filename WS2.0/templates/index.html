@@ -39,50 +39,205 @@
             <p class="text-slate-400 text-sm">Extract verified corresponding author names and emails directly from published research PDFs.</p>
         </div>
 
+        <!-- Navigation Tabs: Stage 1 Scraper vs Stage 2 Final Filtration -->
+        <div class="flex items-center justify-center gap-3">
+            <button type="button" id="tabScraperBtn"
+                    class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border shadow-md bg-indigo-600 border-indigo-500 text-white cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <span>Stage 1: Article Scraper</span>
+            </button>
+            <button type="button" id="tabFilterBtn"
+                    class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border shadow-md bg-slate-800 hover:bg-slate-750 border-slate-700 text-slate-300 hover:text-white cursor-pointer">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>Stage 2: Final Deep Filtration & Verifier</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">100% Inbox Ready</span>
+            </button>
+        </div>
+
+        <!-- STAGE 1: Scraper Section -->
+        <div id="scraperSection" class="space-y-6">
         <!-- Main Card -->
         <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl space-y-5">
-            <form id="extractForm">
+            <!-- Cancel / Action Feedback Banner -->
+            <div id="cancelAlert" class="hidden p-3.5 rounded-lg bg-emerald-950/60 border border-emerald-600/70 text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-3 shadow-md transition-all">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span id="cancelAlertText">Extraction was cancelled and deleted. You can choose a new topic below.</span>
+                </div>
+                <button type="button" onclick="document.getElementById('cancelAlert').classList.add('hidden')" class="text-slate-400 hover:text-white px-1 font-bold">✕</button>
+            </div>
+            <form id="extractForm" class="space-y-5">
 
-                <!-- Row 1: Source / Topic / Count / Submit -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-
-                    <!-- Source -->
-                    <div class="space-y-1">
-                        <label class="text-sm font-semibold text-slate-300">Journal Source</label>
-                        <select id="source_site" name="source_site"
-                                class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500">
-                            <option value="plos">PLOS</option>
-                            <option value="europepmc">Europe PMC</option>
-                            <option value="elife">eLife</option>
-                            <option value="openalex">OpenAlex (All Servers)</option>
-                            <option value="imedpub">iMedPub</option>
-                            <option value="arxiv">arXiv.org</option>
-                            <option value="biorxiv">bioRxiv / medRxiv</option>
-                            <option value="crossref">Crossref (Multi-Server)</option>
-                            <option value="sciencedirect">ScienceDirect (Elsevier)</option>
-                        </select>
+                <!-- Row 1: Topic Keywords / Paper Count / Extract Button -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                    <!-- Topic / Keywords -->
+                    <div class="md:col-span-7 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                Research Topic / Keywords
+                            </label>
+                            <button type="button" id="addKeywordBtn"
+                                    class="text-xs px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/60 text-indigo-300 hover:text-white border border-indigo-500/40 transition-all font-medium flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                                    title="Add another keyword to scrape more emails">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                <span>+ Add</span>
+                            </button>
+                        </div>
+                        <div id="keywordsContainer" class="space-y-2">
+                            <div class="relative flex items-center">
+                                <input type="text" id="topic" name="topics[]" required placeholder="e.g. Artificial Intelligence in Medicine, Genomics..."
+                                       class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-4 pr-24 py-2.5 text-white focus:outline-none focus:border-indigo-500 shadow-inner">
+                                <button type="button" id="inlineAddKeywordBtn"
+                                        class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 text-xs font-semibold rounded-md bg-indigo-600/70 hover:bg-indigo-600 text-white flex items-center gap-1 transition-all shadow cursor-pointer active:scale-95"
+                                        title="Add another keyword">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    <span>+ Add</span>
+                                </button>
+                            </div>
+                            <div id="extraKeywordsList" class="space-y-2"></div>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Search multiple keywords simultaneously to scrape maximum emails across all selected journals.</p>
                     </div>
 
-                    <!-- Topic -->
+                    <!-- Count per Source -->
                     <div class="md:col-span-2 space-y-1">
-                        <label class="text-sm font-semibold text-slate-300">Research Topic / Keywords</label>
-                        <input type="text" id="topic" name="topic" required placeholder="e.g. Medical Sciences"
-                               class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        <label class="text-sm font-semibold text-slate-300" title="Papers to fetch per selected source (1–500)">Papers / Source</label>
+                        <input type="number" id="max_papers" name="max_papers" min="1" max="500" value="10"
+                               class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 shadow-inner">
+                        <p class="text-[11px] text-slate-400">Limit: 1 – 500</p>
                     </div>
 
-                    <!-- Count -->
-                    <div class="space-y-1">
-                        <label class="text-sm font-semibold text-slate-300">Papers Count</label>
-                        <input type="number" id="max_papers" name="max_papers" min="1" max="100" value="10"
-                               class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
-                    </div>
-
-                    <!-- Submit -->
-                    <div>
+                    <!-- Submit Button -->
+                    <div class="md:col-span-3 space-y-1">
+                        <label class="text-sm font-semibold text-transparent select-none hidden md:block">Action</label>
                         <button type="submit" id="submitBtn"
-                                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex justify-center items-center gap-2">
+                                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-lg transition-all flex justify-center items-center gap-2 shadow-lg hover:shadow-indigo-600/30">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
                             <span>Extract Data</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Row 2: Journal Sources Selection Card (Multi-select checkboxes like Country) -->
+                <div class="border border-slate-700/80 rounded-xl p-4 bg-slate-900/50 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-indigo-600/30 text-indigo-400">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                                </svg>
+                            </span>
+                            <h3 class="text-sm font-semibold text-white">Journal Sources & Academic Databases</h3>
+                            <span id="sourceCountBadge" class="text-xs px-2 py-0.5 rounded-full bg-indigo-900/60 text-indigo-300 border border-indigo-700 font-medium">10 / 10 Selected</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="selectAllSources" class="text-xs px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 transition-colors font-medium">
+                                ✓ Select All Sources
+                            </button>
+                            <button type="button" id="clearSources" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-colors">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400">Select one, multiple, or all sources. Selecting multiple sources searches simultaneously and extracts significantly more authors and emails.</p>
+
+                    <!-- 10 Active Sources Checkbox Grid (imedpub, sciencedirect, wiley, researchgate removed) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 pt-1">
+                        <!-- 1. PLOS -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="plos" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">PLOS</span>
+                                <span class="text-[11px] text-slate-400 truncate">Public Library of Science</span>
+                            </div>
+                        </label>
+                        <!-- 2. Europe PMC -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="europepmc" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">Europe PMC</span>
+                                <span class="text-[11px] text-slate-400 truncate">Full-Text XML & PDFs</span>
+                            </div>
+                        </label>
+                        <!-- 3. eLife -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="elife" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">eLife</span>
+                                <span class="text-[11px] text-slate-400 truncate">Life Sciences & Medicine</span>
+                            </div>
+                        </label>
+                        <!-- 4. OpenAlex -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="openalex" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">OpenAlex</span>
+                                <span class="text-[11px] text-slate-400 truncate">Global Open Access Index</span>
+                            </div>
+                        </label>
+                        <!-- 5. arXiv -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="arxiv" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">arXiv.org</span>
+                                <span class="text-[11px] text-slate-400 truncate">Cornell University Archive</span>
+                            </div>
+                        </label>
+                        <!-- 6. bioRxiv / medRxiv -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="biorxiv" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">bioRxiv / medRxiv</span>
+                                <span class="text-[11px] text-slate-400 truncate">CSHL Biology & Medicine</span>
+                            </div>
+                        </label>
+                        <!-- 7. Crossref -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="crossref" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">Crossref</span>
+                                <span class="text-[11px] text-slate-400 truncate">Multi-Publisher Network</span>
+                            </div>
+                        </label>
+                        <!-- 8. PubMed / NCBI -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="pubmed" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">PubMed / NCBI</span>
+                                <span class="text-[11px] text-slate-400 truncate">pubmed.ncbi.nlm.nih.gov</span>
+                            </div>
+                        </label>
+                        <!-- 9. Frontiers -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="frontiers" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">Frontiers</span>
+                                <span class="text-[11px] text-slate-400 truncate">frontiersin.org</span>
+                            </div>
+                        </label>
+                        <!-- 10. AHA Journals -->
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-indigo-500/70 cursor-pointer transition-all text-slate-200 select-none group">
+                            <input type="checkbox" class="source-cb rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-600 w-4 h-4 cursor-pointer" name="source_sites[]" value="aha" checked>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">AHA Journals</span>
+                                <span class="text-[11px] text-slate-400 truncate">ahajournals.org</span>
+                            </div>
+                        </label>
                     </div>
                 </div>
 
@@ -118,7 +273,11 @@
                                     </svg>
                                     Countries / Regions
                                 </h3>
-                                <button type="button" id="clearCountries" class="text-xs text-slate-500 hover:text-slate-300">Clear</button>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" id="selectAllCountries" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors">Select All</button>
+                                    <span class="text-slate-600">|</span>
+                                    <button type="button" id="clearCountries" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">Clear</button>
+                                </div>
                             </div>
                             <p class="text-xs text-slate-500">Leave all unchecked = no country filter</p>
                             <div class="country-scroll space-y-2 max-h-52 overflow-y-auto pr-1">
@@ -234,7 +393,7 @@
                                     <input type="checkbox" class="filter-check type-cb" name="article_types[]" value="Systematic Review"> Systematic Review
                                 </label>
                                 <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check type-cb" name="article_types[]" value="Brief Report"> Brief Report
+                                    <input type="checkbox" class="filter-check type-cb" name="article_types[]" value="Case Reports"> Case Reports
                                 </label>
                             </div>
                         </div>
@@ -247,13 +406,18 @@
 
         <!-- Status & Loader -->
         <div id="statusBox" class="hidden p-6 rounded-xl bg-slate-800 border border-slate-700 shadow-xl space-y-4">
-            <div class="flex justify-between items-center text-sm font-medium">
+            <div class="flex flex-wrap justify-between items-center gap-2 text-sm font-medium">
                 <div class="flex items-center space-x-3 text-indigo-400">
-                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                    <svg id="statusSpinner" class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                     </svg>
                     <span id="statusText" class="text-slate-200">Starting extraction...</span>
+                    <!-- Status Badge -->
+                    <span id="stateBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-900/60 text-indigo-300 border border-indigo-700">
+                        <span class="w-2 h-2 mr-1.5 bg-indigo-400 rounded-full animate-ping"></span>
+                        Running
+                    </span>
                 </div>
                 <div class="text-indigo-400 font-bold">
                     Extraction Progress: <span id="percentageText">0%</span>
@@ -265,33 +429,116 @@
                 <div id="progressBar" class="bg-indigo-500 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
             </div>
 
-            <!-- Live Counter -->
-            <div class="flex justify-between items-center pt-2 border-t border-slate-700/50">
-                <span class="text-sm text-slate-400">Total Verified Contacts Found:</span>
-                <span id="liveContactCount" class="text-lg font-bold text-emerald-400">0</span>
+            <!-- Live Counter & Action Buttons -->
+            <div class="flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-slate-700/60">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-slate-400">Total Verified Contacts Found:</span>
+                    <span id="liveContactCount" class="text-lg font-bold text-emerald-400">0</span>
+                </div>
+
+                <!-- Controls: Stop / Continue / Finish / Cancel & Delete -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Stop Extraction Button -->
+                    <button type="button" id="stopBtn" title="Stop / Pause extracting further papers"
+                            class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 hover:border-amber-400 transition-all cursor-pointer">
+                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                            <rect x="5" y="5" width="14" height="14" rx="2" />
+                        </svg>
+                        <span>Stop Extraction</span>
+                    </button>
+
+                    <!-- Continue Extraction Button (shown when stopped) -->
+                    <button type="button" id="continueBtn" title="Resume extraction from where it stopped"
+                            class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 shadow-md shadow-emerald-900/30 transition-all cursor-pointer">
+                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        <span>Continue</span>
+                    </button>
+
+                    <!-- Finish & Save Extracted Button -->
+                    <button type="button" id="finishBtn" title="End extraction early and save current contacts to Excel"
+                            class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600 hover:text-white transition-all cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Finish & Save</span>
+                    </button>
+
+                    <!-- Cancel & Delete Extraction Button -->
+                    <button type="button" id="cancelBtn" title="Cancel extraction, delete temporary data, and switch to another topic"
+                            class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/60 hover:bg-rose-600 hover:text-white hover:border-rose-500 transition-all cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Cancel & Delete</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pause Announcement Notice (appears when stopped) -->
+            <div id="pauseNotice" class="hidden p-3 rounded-lg bg-amber-950/40 border border-amber-800/60 text-xs text-amber-200 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong>Extraction is stopped:</strong> Processing has paused. Click <strong>Continue Extraction</strong> to resume, or <strong>Finish & Save</strong> to generate the Excel file now.</span>
+                </div>
             </div>
         </div>
 
         <!-- Results Table Section -->
         <div id="resultsCard" class="hidden space-y-4">
-            <div class="flex justify-between items-center bg-slate-800 p-4 rounded-lg border border-slate-700">
+            <!-- Stopped early notice banner -->
+            <div id="stoppedEarlyBanner" class="hidden p-3.5 rounded-lg bg-amber-950/50 border border-amber-800 text-sm text-amber-200 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-lg">⏸️</span>
+                    <div>
+                        <span class="font-semibold text-amber-300">Extraction Stopped Early:</span>
+                        <span id="stoppedEarlyDetail" class="text-slate-300 text-xs ml-1">Contacts collected up to that point have been saved.</span>
+                    </div>
+                </div>
+                <button type="button" id="resumeFromResultsBtn"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all cursor-pointer">
+                    <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <span>Continue Extraction (Next Batch)</span>
+                </button>
+            </div>
+
+            <div class="flex flex-wrap justify-between items-center gap-3 bg-slate-800 p-4 rounded-lg border border-slate-700">
                 <div>
                     <span class="text-sm text-slate-400">Total Verified Contacts Found: </span>
                     <span id="countBadge" class="text-lg font-bold text-emerald-400">0</span>
                 </div>
-                <a id="downloadLink" href="#"
-                   class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    Download Excel (.xlsx)
-                </a>
+                <div class="flex items-center gap-3">
+                    <button type="button" id="startNewTopicBtn"
+                            class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 text-xs sm:text-sm border border-slate-600 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Change / New Topic</span>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="sendToStage2Btn" onclick="switchToStage2()"
+                                class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm shadow-md cursor-pointer">
+                            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <span>Final Filtration & Verification ➔</span>
+                        </button>
+                        <a id="downloadLink" href="#"
+                           class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm shadow-md shadow-emerald-900/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download Excel (.xlsx)
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
                 <table class="w-full text-left text-sm text-slate-300">
                     <thead class="bg-slate-700 text-slate-200 uppercase text-xs">
                         <tr>
-                            <th class="px-4 py-3">Source</th>
-                            <th class="px-4 py-3">PDF File</th>
                             <th class="px-4 py-3">Paper Title</th>
                             <th class="px-4 py-3">Author Name</th>
                             <th class="px-4 py-3">Email ID</th>
@@ -301,6 +548,178 @@
                     <tbody id="tableBody" class="divide-y divide-slate-700">
                     </tbody>
                 </table>
+            </div>
+        </div>
+        </div> <!-- /scraperSection -->
+
+        <!-- STAGE 2: Deep Email Filtration & Verifier Section -->
+        <div id="filterSection" class="hidden space-y-6">
+            <!-- Stage 2 Intro Banner -->
+            <div class="bg-gradient-to-r from-emerald-950/60 to-slate-800 p-6 rounded-xl border border-emerald-700/50 shadow-xl space-y-3">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-emerald-300">Stage 2: Final Deep Filtration & Email Verifier</h2>
+                        <p class="text-slate-300 text-xs sm:text-sm">Filter and verify your scraped emails to ensure 100% active, live inboxes ready for outreach.</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 pt-1 text-xs">
+                    <span class="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Strict 4 Clean Columns Output
+                    </span>
+                    <span class="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Both Academic & Personal Live Inboxes
+                    </span>
+                    <span class="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Footnote & PDF Glitch Cleaner
+                    </span>
+                    <span class="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 20 Concurrent Verification Threads
+                    </span>
+                </div>
+            </div>
+
+            <!-- Upload Card -->
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl space-y-5">
+                <form id="filterUploadForm" class="space-y-5">
+                    <!-- Drop Zone -->
+                    <div id="dropZone"
+                         class="border-2 border-dashed border-slate-600 hover:border-emerald-500/80 rounded-xl p-8 text-center cursor-pointer transition-all bg-slate-900/50 hover:bg-slate-900 group">
+                        <input type="file" id="filterFileInput" name="file" accept=".xlsx,.xls,.csv" class="hidden">
+                        <div class="flex flex-col items-center justify-center space-y-3">
+                            <div class="p-3.5 rounded-full bg-slate-800 group-hover:bg-emerald-950/50 text-indigo-400 group-hover:text-emerald-400 transition-colors border border-slate-700 group-hover:border-emerald-500/40">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-slate-200">
+                                    <span class="text-emerald-400 group-hover:underline">Click to upload</span> or drag and drop your scraped Excel/CSV file
+                                </p>
+                                <p class="text-xs text-slate-400 mt-1">Supports .xlsx, .xls, or .csv (scraped from Stage 1 or any existing author list)</p>
+                            </div>
+                        </div>
+
+                        <!-- Selected File Badge -->
+                        <div id="selectedFileInfo" class="hidden mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-600 text-emerald-300 text-xs">
+                            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span id="selectedFileName" class="font-medium">filename.xlsx</span>
+                            <span id="selectedFileSize" class="text-emerald-400/80"></span>
+                            <button type="button" id="removeFileBtn" class="ml-1 text-slate-400 hover:text-white font-bold cursor-pointer">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Option B: API Key Input (Optional) -->
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                                <span>Verification API Key (Option B - Optional)</span>
+                            </label>
+                            <span class="text-[11px] text-slate-400 font-mono">ZeroBounce / Hunter / Debounce</span>
+                        </div>
+                        <input type="text" id="filterApiKey" name="api_key" placeholder="Enter API Key (Leave empty to use built-in 20-thread high-speed local engine for free)"
+                               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                        <p class="text-[11px] text-slate-400">
+                            💡 If left empty, our built-in engine checks DNS MX records, cleans footnote errors, verifies domain health, and tests live server handshakes at maximum speed.
+                        </p>
+                    </div>
+
+                    <!-- Start Button -->
+                    <button type="submit" id="startFilterBtn"
+                            class="w-full py-3.5 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-950/40 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Start Deep Filtration & Verification</span>
+                    </button>
+                </form>
+
+                <!-- Filter Progress Section -->
+                <div id="filterProgressCard" class="hidden space-y-4 pt-4 border-t border-slate-700">
+                    <div class="flex items-center justify-between text-xs font-semibold">
+                        <span id="filterStatusText" class="text-emerald-300 animate-pulse">Validating records...</span>
+                        <span id="filterPercentageText" class="text-slate-300">0%</span>
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div class="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden border border-slate-700">
+                        <div id="filterProgressBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Metric Badges -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/80 text-center">
+                            <span class="block text-[11px] text-slate-400">Total Uploaded</span>
+                            <span id="filterTotalCount" class="text-base font-bold text-white">0</span>
+                        </div>
+                        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/80 text-center">
+                            <span class="block text-[11px] text-slate-400">Processed</span>
+                            <span id="filterProcessedCount" class="text-base font-bold text-indigo-400">0</span>
+                        </div>
+                        <div class="bg-emerald-950/40 p-3 rounded-lg border border-emerald-800/60 text-center">
+                            <span class="block text-[11px] text-emerald-400 font-medium">Valid Live Inboxes</span>
+                            <span id="filterValidCount" class="text-base font-bold text-emerald-400">0</span>
+                        </div>
+                        <div class="bg-rose-950/40 p-3 rounded-lg border border-rose-900/60 text-center">
+                            <span class="block text-[11px] text-rose-400 font-medium">Dropped / Invalid</span>
+                            <span id="filterDroppedCount" class="text-base font-bold text-rose-400">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Results Card -->
+            <div id="filterResultsCard" class="hidden space-y-4">
+                <div class="flex flex-wrap justify-between items-center gap-3 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-xl">
+                    <div>
+                        <span class="text-xs text-slate-400 block">Cleaned & 100% Deliverable Inboxes</span>
+                        <div class="flex items-center gap-2">
+                            <span id="filterResultsCountBadge" class="text-xl font-bold text-emerald-400">0</span>
+                            <span class="text-xs text-emerald-300 font-medium bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700/60">Strict 4 Columns</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <a id="filterDownloadDroppedLink" href="#" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white font-medium px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 text-xs border border-slate-600">
+                            <svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span>Dropped Audit Log (.csv)</span>
+                        </a>
+                        <a id="filterDownloadLink" href="#"
+                           class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold px-4 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm shadow-md shadow-emerald-950/50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            <span>Download Pristine Excel (.xlsx)</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Preview Table -->
+                <div class="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700 shadow-xl">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-700 text-slate-200 uppercase text-xs">
+                            <tr>
+                                <th class="px-4 py-3">Paper Title</th>
+                                <th class="px-4 py-3">Author Name</th>
+                                <th class="px-4 py-3">Email ID</th>
+                                <th class="px-4 py-3">DOI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filterTableBody" class="divide-y divide-slate-700">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -327,7 +746,51 @@
             updateFilterTags();
         }
 
+        // ── Journal Sources Multi-select Management ──────────────────
+        function updateSourceCount() {
+            const allCbs = document.querySelectorAll('.source-cb');
+            const checkedCbs = document.querySelectorAll('.source-cb:checked');
+            const badge = document.getElementById('sourceCountBadge');
+            if (badge) {
+                badge.textContent = `${checkedCbs.length} / ${allCbs.length} Selected`;
+                if (checkedCbs.length === 0) {
+                    badge.className = 'text-xs px-2 py-0.5 rounded-full bg-red-900/60 text-red-300 border border-red-700 font-medium';
+                } else if (checkedCbs.length === allCbs.length) {
+                    badge.className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700 font-medium';
+                } else {
+                    badge.className = 'text-xs px-2 py-0.5 rounded-full bg-indigo-900/60 text-indigo-300 border border-indigo-700 font-medium';
+                }
+            }
+            updateFilterTags();
+        }
+
+        const selectAllSourcesBtn = document.getElementById('selectAllSources');
+        if (selectAllSourcesBtn) {
+            selectAllSourcesBtn.addEventListener('click', () => {
+                document.querySelectorAll('.source-cb').forEach(cb => cb.checked = true);
+                updateSourceCount();
+            });
+        }
+
+        const clearSourcesBtn = document.getElementById('clearSources');
+        if (clearSourcesBtn) {
+            clearSourcesBtn.addEventListener('click', () => {
+                document.querySelectorAll('.source-cb').forEach(cb => cb.checked = false);
+                updateSourceCount();
+            });
+        }
+
+        document.querySelectorAll('.source-cb').forEach(cb => cb.addEventListener('change', updateSourceCount));
+
         // ── Clear individual filter groups ───────────────────────────
+        const selectAllCountriesBtn = document.getElementById('selectAllCountries');
+        if (selectAllCountriesBtn) {
+            selectAllCountriesBtn.addEventListener('click', () => {
+                document.querySelectorAll('.country-cb').forEach(cb => cb.checked = true);
+                updateFilterTags();
+            });
+        }
+
         document.getElementById('clearCountries').addEventListener('click', () => {
             document.querySelectorAll('.country-cb').forEach(cb => cb.checked = false);
             updateFilterTags();
@@ -354,12 +817,22 @@
             const clearBtn = document.getElementById('clearFilters');
             tagsDiv.innerHTML = '';
 
+            const sources     = [...document.querySelectorAll('.source-cb:checked')].map(s => s.value);
+            const totalSources= document.querySelectorAll('.source-cb').length;
             const countries   = [...document.querySelectorAll('.country-cb:checked')].map(c => c.value);
             const types       = [...document.querySelectorAll('.type-cb:checked')].map(c => c.value);
             const yearFrom    = document.getElementById('year_from').value;
             const yearTo      = document.getElementById('year_to').value;
 
-            if (countries.length) {
+            if (sources.length > 0 && sources.length < totalSources) {
+                tagsDiv.innerHTML += `<span class="filter-tag">📚 ${sources.length} Sources</span>`;
+            } else if (sources.length === totalSources && totalSources > 0) {
+                tagsDiv.innerHTML += `<span class="filter-tag">📚 All ${totalSources} Sources</span>`;
+            }
+
+            if (countries.length === document.querySelectorAll('.country-cb').length && countries.length > 0) {
+                tagsDiv.innerHTML += `<span class="filter-tag">🌍 All Countries</span>`;
+            } else if (countries.length) {
                 tagsDiv.innerHTML += `<span class="filter-tag">🌍 ${countries.join(', ')}</span>`;
             }
             if (yearFrom || yearTo) {
@@ -379,17 +852,36 @@
         document.getElementById('year_from').addEventListener('input', updateFilterTags);
         document.getElementById('year_to').addEventListener('input', updateFilterTags);
 
-        // ── Main Form ────────────────────────────────────────────────
-        const form        = document.getElementById('extractForm');
-        const submitBtn   = document.getElementById('submitBtn');
-        const statusBox   = document.getElementById('statusBox');
-        const statusText  = document.getElementById('statusText');
-        const resultsCard = document.getElementById('resultsCard');
-        const tableBody   = document.getElementById('tableBody');
-        const countBadge  = document.getElementById('countBadge');
-        const downloadLink= document.getElementById('downloadLink');
+        // ── Main Form & Control Elements ────────────────────────────
+        const form                = document.getElementById('extractForm');
+        const submitBtn           = document.getElementById('submitBtn');
+        const statusBox           = document.getElementById('statusBox');
+        const statusText          = document.getElementById('statusText');
+        const resultsCard         = document.getElementById('resultsCard');
+        const tableBody           = document.getElementById('tableBody');
+        const countBadge          = document.getElementById('countBadge');
+        const downloadLink        = document.getElementById('downloadLink');
+        const progressBar         = document.getElementById('progressBar');
+        const percentageText      = document.getElementById('percentageText');
+        const liveContactCount    = document.getElementById('liveContactCount');
 
+        const stopBtn             = document.getElementById('stopBtn');
+        const continueBtn         = document.getElementById('continueBtn');
+        const finishBtn           = document.getElementById('finishBtn');
+        const cancelBtn           = document.getElementById('cancelBtn');
+        const cancelAlert         = document.getElementById('cancelAlert');
+        const cancelAlertText     = document.getElementById('cancelAlertText');
+        const startNewTopicBtn    = document.getElementById('startNewTopicBtn');
+        const stateBadge          = document.getElementById('stateBadge');
+        const statusSpinner       = document.getElementById('statusSpinner');
+        const pauseNotice         = document.getElementById('pauseNotice');
+        const stoppedEarlyBanner  = document.getElementById('stoppedEarlyBanner');
+        const stoppedEarlyDetail  = document.getElementById('stoppedEarlyDetail');
+        const resumeFromResultsBtn= document.getElementById('resumeFromResultsBtn');
+
+        let currentTaskId = null;
         let pollInterval = null;
+        let lastSearchParams = null;
 
         function setLoading(isLoading) {
             submitBtn.disabled = isLoading;
@@ -402,8 +894,183 @@
             }
         }
 
+        function setPausedUI(isPaused) {
+            if (isPaused) {
+                stopBtn.classList.add('hidden');
+                continueBtn.classList.remove('hidden');
+                pauseNotice.classList.remove('hidden');
+                if (statusSpinner) statusSpinner.classList.remove('animate-spin');
+                if (stateBadge) {
+                    stateBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-900/60 text-amber-300 border border-amber-600';
+                    stateBadge.innerHTML = '<span class="w-2 h-2 mr-1.5 bg-amber-400 rounded-full"></span>Stopped / Paused';
+                }
+            } else {
+                stopBtn.classList.remove('hidden');
+                continueBtn.classList.add('hidden');
+                pauseNotice.classList.add('hidden');
+                if (statusSpinner) statusSpinner.classList.add('animate-spin');
+                if (stateBadge) {
+                    stateBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-900/60 text-indigo-300 border border-indigo-700';
+                    stateBadge.innerHTML = '<span class="w-2 h-2 mr-1.5 bg-indigo-400 rounded-full animate-ping"></span>Running';
+                }
+            }
+        }
+
+        // ── Stop Extraction Click Handler ─────────────────────────────
+        stopBtn.addEventListener('click', async () => {
+            if (!currentTaskId) return;
+            stopBtn.disabled = true;
+            stopBtn.classList.add('opacity-50');
+
+            try {
+                const resp = await fetch(`/stop-extraction/${currentTaskId}`, { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    setPausedUI(true);
+                    statusText.textContent = data.message || 'Extraction stopped. Click Continue to resume.';
+                } else {
+                    alert(data.error || 'Could not stop extraction.');
+                }
+            } catch (e) {
+                console.error('Error stopping extraction:', e);
+                alert('Failed to send stop command.');
+            } finally {
+                stopBtn.disabled = false;
+                stopBtn.classList.remove('opacity-50');
+            }
+        });
+
+        // ── Continue Extraction Click Handler ─────────────────────────
+        continueBtn.addEventListener('click', async () => {
+            if (!currentTaskId) return;
+            continueBtn.disabled = true;
+            continueBtn.classList.add('opacity-50');
+
+            try {
+                const resp = await fetch(`/continue-extraction/${currentTaskId}`, { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    setPausedUI(false);
+                    statusText.textContent = 'Continuing extraction...';
+                } else {
+                    alert(data.error || 'Could not continue extraction.');
+                }
+            } catch (e) {
+                console.error('Error continuing extraction:', e);
+                alert('Failed to send continue command.');
+            } finally {
+                continueBtn.disabled = false;
+                continueBtn.classList.remove('opacity-50');
+            }
+        });
+
+        // ── Finish & Save Early Click Handler ─────────────────────────
+        finishBtn.addEventListener('click', async () => {
+            if (!currentTaskId) return;
+            if (!confirm('Stop extracting remaining papers and save contacts found so far to Excel?')) return;
+
+            finishBtn.disabled = true;
+            finishBtn.classList.add('opacity-50');
+            statusText.textContent = 'Stopping and saving collected contacts to Excel...';
+
+            try {
+                await fetch(`/finish-extraction/${currentTaskId}`, { method: 'POST' });
+            } catch (e) {
+                console.error('Error finishing extraction:', e);
+            }
+        });
+
+        // ── Cancel & Delete Extraction Click Handler ──────────────────
+        cancelBtn.addEventListener('click', async () => {
+            if (!currentTaskId) return;
+            if (!confirm('Cancel this extraction? All temporary downloads for this run will be deleted, and you can immediately choose another topic.')) {
+                return;
+            }
+
+            cancelBtn.disabled = true;
+            cancelBtn.classList.add('opacity-50');
+            statusText.textContent = 'Cancelling extraction and cleaning up files...';
+
+            const taskIdToCancel = currentTaskId;
+
+            // Stop polling immediately
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            localStorage.removeItem('active_task_id');
+            currentTaskId = null;
+
+            try {
+                const resp = await fetch(`/cancel-extraction/${taskIdToCancel}`, { method: 'POST' });
+                const data = await resp.json();
+
+                // Reset loading and hide status box
+                setLoading(false);
+                resultsCard.classList.add('hidden');
+                stoppedEarlyBanner.classList.add('hidden');
+
+                // Show notification banner
+                if (cancelAlert) {
+                    if (cancelAlertText) {
+                        cancelAlertText.textContent = data.message || 'Extraction cancelled and deleted. You can choose a new topic now.';
+                    }
+                    cancelAlert.classList.remove('hidden');
+                }
+
+                // Focus the topic input for effortless topic change
+                const topicInput = document.getElementById('topic');
+                if (topicInput) {
+                    topicInput.focus();
+                    topicInput.select();
+                }
+            } catch (e) {
+                console.error('Error cancelling extraction:', e);
+                fetch('/reset-lock', { method: 'POST' }).catch(() => {});
+                setLoading(false);
+                if (cancelAlert) {
+                    if (cancelAlertText) {
+                        cancelAlertText.textContent = 'Extraction cancelled and lock cleared. Ready for a new topic.';
+                    }
+                    cancelAlert.classList.remove('hidden');
+                }
+            } finally {
+                cancelBtn.disabled = false;
+                cancelBtn.classList.remove('opacity-50');
+            }
+        });
+
+        // ── New Topic Click Handler from Results ──────────────────────
+        if (startNewTopicBtn) {
+            startNewTopicBtn.addEventListener('click', () => {
+                resultsCard.classList.add('hidden');
+                stoppedEarlyBanner.classList.add('hidden');
+                const topicInput = document.getElementById('topic');
+                if (topicInput) {
+                    topicInput.focus();
+                    topicInput.select();
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+
+        // ── Continue Extraction from Results Card ─────────────────────
+        resumeFromResultsBtn.addEventListener('click', () => {
+            if (!lastSearchParams) return;
+            if (lastSearchParams.source_sites && lastSearchParams.source_sites.length > 0) {
+                document.querySelectorAll('.source-cb').forEach(cb => {
+                    cb.checked = lastSearchParams.source_sites.includes(cb.value);
+                });
+                updateSourceCount();
+            }
+            document.getElementById('topic').value = lastSearchParams.topic || '';
+            const remaining = Math.max(5, (lastSearchParams.max_papers || 10) - (lastSearchParams.processed_papers || 0));
+            document.getElementById('max_papers').value = remaining;
+            form.dispatchEvent(new Event('submit'));
+        });
+
         function showResults(result) {
-            if (result.success && result.data.length > 0) {
+            if (result.success && result.data && result.data.length > 0) {
                 countBadge.textContent = result.total_records;
                 downloadLink.href = `/download/${result.download_file}`;
                 tableBody.innerHTML = '';
@@ -411,30 +1078,169 @@
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-750 border-b border-slate-700';
                     tr.innerHTML = `
-                        <td class="px-4 py-3 font-semibold text-indigo-400 text-xs">${row['Source Journal']}</td>
-                        <td class="px-4 py-3 font-mono text-xs text-slate-300">${row['PDF File Name']}</td>
-                        <td class="px-4 py-3 max-w-xs truncate" title="${row['Paper Title']}">${row['Paper Title']}</td>
-                        <td class="px-4 py-3 font-semibold text-white">${row['Author Name']}</td>
-                        <td class="px-4 py-3 text-emerald-400 font-mono text-xs">${row['Email ID']}</td>
-                        <td class="px-4 py-3 font-mono text-xs text-slate-400">${row['DOI']}</td>
+                        <td class="px-4 py-3 max-w-md truncate" title="${row['Paper Title'] || ''}">${row['Paper Title'] || ''}</td>
+                        <td class="px-4 py-3 font-semibold text-white">${row['Author Name'] || ''}</td>
+                        <td class="px-4 py-3 text-emerald-400 font-mono text-xs">${row['Email ID'] || ''}</td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-400">${row['DOI'] || ''}</td>
                     `;
                     tableBody.appendChild(tr);
                 });
+
+                if (result.stopped_early) {
+                    stoppedEarlyBanner.classList.remove('hidden');
+                    const processed = result.processed_papers || '?';
+                    const total = result.total_papers || '?';
+                    stoppedEarlyDetail.textContent = `Stopped at paper ${processed} of ${total}. All ${result.total_records} contacts found up to that point have been saved.`;
+                    lastSearchParams = {
+                        source_sites: result.source_sites || (result.source_site ? [result.source_site] : []),
+                        topic: result.topic || document.getElementById('topic').value,
+                        max_papers: result.max_papers || document.getElementById('max_papers').value,
+                        processed_papers: result.processed_papers || 0,
+                    };
+                } else {
+                    stoppedEarlyBanner.classList.add('hidden');
+                }
+
                 resultsCard.classList.remove('hidden');
             } else {
+                stoppedEarlyBanner.classList.add('hidden');
                 alert(result.message || result.error || 'No matching records found.');
             }
         }
 
-        const progressBar       = document.getElementById('progressBar');
-        const percentageText    = document.getElementById('percentageText');
-        const liveContactCount  = document.getElementById('liveContactCount');
+        function startPolling(taskId) {
+            if (pollInterval) clearInterval(pollInterval);
+
+            pollInterval = setInterval(async () => {
+                try {
+                    const statusResp = await fetch(`/status/${taskId}`);
+                    if (statusResp.status === 404) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        setLoading(false);
+                        localStorage.removeItem('active_task_id');
+                        return;
+                    }
+
+                    const statusData = await statusResp.json();
+
+                    if (statusData.progress) statusText.textContent = statusData.progress;
+                    
+                    // Update live progress and counter
+                    const pct = statusData.percentage || 0;
+                    progressBar.style.width = pct + '%';
+                    percentageText.textContent = pct + '%';
+                    
+                    const found = statusData.contacts_found || 0;
+                    liveContactCount.textContent = found;
+
+                    // Update pause state UI
+                    if (statusData.status === 'paused' || statusData.is_paused) {
+                        setPausedUI(true);
+                    } else if (statusData.status === 'running') {
+                        setPausedUI(false);
+                    }
+
+                    // Check if cancelled
+                    if (statusData.status === 'cancelled' || statusData.is_cancelled) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        localStorage.removeItem('active_task_id');
+                        currentTaskId = null;
+                        setLoading(false);
+                        resultsCard.classList.add('hidden');
+                        return;
+                    }
+
+                    if (statusData.status === 'done' || statusData.status === 'error') {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        localStorage.removeItem('active_task_id');
+                        
+                        if (statusData.status === 'error') {
+                            progressBar.classList.remove('bg-indigo-500');
+                            progressBar.classList.add('bg-red-500');
+                        }
+                        
+                        const resultResp = await fetch(`/result/${taskId}`);
+                        const result = await resultResp.json();
+                        setLoading(false);
+                        showResults(result);
+                    }
+                } catch (pollErr) {
+                    console.error('Polling error:', pollErr);
+                }
+            }, 1800);
+        }
+
+        // ── Dynamic Keywords Management ──────────────────────────────
+        const extraKeywordsList = document.getElementById('extraKeywordsList');
+        const addKeywordBtn = document.getElementById('addKeywordBtn');
+        const inlineAddKeywordBtn = document.getElementById('inlineAddKeywordBtn');
+
+        function addKeywordField(initialVal = '') {
+            const allInputs = document.querySelectorAll('input[name="topics[]"]');
+            if (allInputs.length >= 10) {
+                alert('You can add up to 10 keywords at a time.');
+                return;
+            }
+
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 animate-fadeIn';
+            row.innerHTML = `
+                <input type="text" name="topics[]" placeholder="Additional keyword / topic..." value="${initialVal.replace(/"/g, '&quot;')}"
+                       class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 shadow-inner">
+                <button type="button" class="remove-keyword-btn p-2 rounded-lg bg-red-950/40 border border-red-700/50 hover:bg-red-900/60 text-red-300 hover:text-white transition-colors flex items-center justify-center shrink-0 cursor-pointer" title="Remove keyword">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            const removeBtn = row.querySelector('.remove-keyword-btn');
+            removeBtn.addEventListener('click', () => {
+                row.remove();
+            });
+
+            extraKeywordsList.appendChild(row);
+            const input = row.querySelector('input');
+            input.focus();
+        }
+
+        if (addKeywordBtn) {
+            addKeywordBtn.addEventListener('click', () => addKeywordField());
+        }
+        if (inlineAddKeywordBtn) {
+            inlineAddKeywordBtn.addEventListener('click', () => addKeywordField());
+        }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Validate at least one keyword is provided
+            const allTopicInputs = [...document.querySelectorAll('input[name="topics[]"]')];
+            const validTopics = allTopicInputs.map(i => i.value.trim()).filter(v => v.length > 0);
+            if (validTopics.length === 0) {
+                alert('Please enter at least one research topic or keyword.');
+                return;
+            }
+
+            // Sync primary topic input
+            const primaryTopicInput = document.getElementById('topic');
+            if (primaryTopicInput) {
+                primaryTopicInput.value = validTopics[0];
+            }
+
+            // Validate at least one journal source is checked
+            const selectedSources = [...document.querySelectorAll('.source-cb:checked')];
+            if (selectedSources.length === 0) {
+                alert('Please select at least one Journal Source website before extracting.');
+                return;
+            }
+
             // Reset UI
+            if (cancelAlert) cancelAlert.classList.add('hidden');
             resultsCard.classList.add('hidden');
+            stoppedEarlyBanner.classList.add('hidden');
             tableBody.innerHTML = '';
             statusText.textContent = 'Starting extraction...';
             progressBar.style.width = '0%';
@@ -442,9 +1248,11 @@
             progressBar.classList.add('bg-indigo-500');
             percentageText.textContent = '0%';
             liveContactCount.textContent = '0';
+            setPausedUI(false);
             setLoading(true);
 
             const formData = new FormData(form);
+            formData.set('topic', validTopics.join(', '));
 
             try {
                 const startResp = await fetch('/start-extraction', { method: 'POST', body: formData });
@@ -452,45 +1260,27 @@
 
                 if (startData.error) {
                     setLoading(false);
-                    alert(startData.error);
+                    if (startResp.status === 429) {
+                        const forceStop = confirm(startData.error + "\n\nWould you like to force stop the active/previous extraction and clear the lock now?");
+                        if (forceStop) {
+                            try {
+                                const resetResp = await fetch('/reset-lock', { method: 'POST' });
+                                const resetData = await resetResp.json();
+                                localStorage.removeItem('active_task_id');
+                                alert(resetData.message || 'Previous extraction was stopped and lock cleared. You can now click Extract Data.');
+                            } catch (resetErr) {
+                                alert('Failed to reset lock: ' + resetErr);
+                            }
+                        }
+                    } else {
+                        alert(startData.error);
+                    }
                     return;
                 }
 
-                const taskId = startData.task_id;
-
-                pollInterval = setInterval(async () => {
-                    try {
-                        const statusResp = await fetch(`/status/${taskId}`);
-                        const statusData = await statusResp.json();
-
-                        if (statusData.progress) statusText.textContent = statusData.progress;
-                        
-                        // Update live progress and counter
-                        const pct = statusData.percentage || 0;
-                        progressBar.style.width = pct + '%';
-                        percentageText.textContent = pct + '%';
-                        
-                        const found = statusData.contacts_found || 0;
-                        liveContactCount.textContent = found;
-
-                        if (statusData.status === 'done' || statusData.status === 'error') {
-                            clearInterval(pollInterval);
-                            pollInterval = null;
-                            
-                            if (statusData.status === 'error') {
-                                progressBar.classList.remove('bg-indigo-500');
-                                progressBar.classList.add('bg-red-500');
-                            }
-                            
-                            const resultResp = await fetch(`/result/${taskId}`);
-                            const result = await resultResp.json();
-                            setLoading(false);
-                            showResults(result);
-                        }
-                    } catch (pollErr) {
-                        console.error('Polling error:', pollErr);
-                    }
-                }, 3000);
+                currentTaskId = startData.task_id;
+                localStorage.setItem('active_task_id', currentTaskId);
+                startPolling(currentTaskId);
 
             } catch (err) {
                 setLoading(false);
@@ -498,6 +1288,268 @@
                 alert('Could not connect to the backend. Please make sure the server is running.');
             }
         });
+
+        // Reconnect polling if user reloads page while task is active
+        window.addEventListener('DOMContentLoaded', async () => {
+            const savedTaskId = localStorage.getItem('active_task_id');
+            if (savedTaskId) {
+                try {
+                    const checkResp = await fetch(`/status/${savedTaskId}`);
+                    if (checkResp.ok) {
+                        const checkData = await checkResp.json();
+                        if (checkData.status === 'running' || checkData.status === 'paused' || checkData.status === 'starting') {
+                            currentTaskId = savedTaskId;
+                            setLoading(true);
+                            if (checkData.status === 'paused') setPausedUI(true);
+                            startPolling(savedTaskId);
+                            return;
+                        } else if (checkData.status === 'done') {
+                            const resResp = await fetch(`/result/${savedTaskId}`);
+                            if (resResp.ok) {
+                                const resData = await resResp.json();
+                                showResults(resData);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not restore previous task:', e);
+                }
+                localStorage.removeItem('active_task_id');
+            }
+        });
+        // ==============================================================
+        // ── STAGE 2: Deep Filtration & Email Verifier Script ──────────
+        // ==============================================================
+        const tabScraperBtn = document.getElementById('tabScraperBtn');
+        const tabFilterBtn  = document.getElementById('tabFilterBtn');
+        const scraperSection = document.getElementById('scraperSection');
+        const filterSection  = document.getElementById('filterSection');
+
+        function switchToScraper() {
+            scraperSection.classList.remove('hidden');
+            filterSection.classList.add('hidden');
+            tabScraperBtn.className = 'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border shadow-md bg-indigo-600 border-indigo-500 text-white cursor-pointer';
+            tabFilterBtn.className  = 'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border shadow-md bg-slate-800 hover:bg-slate-750 border-slate-700 text-slate-300 hover:text-white cursor-pointer';
+        }
+
+        function switchToStage2() {
+            scraperSection.classList.add('hidden');
+            filterSection.classList.remove('hidden');
+            tabFilterBtn.className  = 'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border shadow-md bg-emerald-600 border-emerald-500 text-white cursor-pointer';
+            tabScraperBtn.className = 'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 border shadow-md bg-slate-800 hover:bg-slate-750 border-slate-700 text-slate-300 hover:text-white cursor-pointer';
+        }
+
+        if (tabScraperBtn) tabScraperBtn.addEventListener('click', switchToScraper);
+        if (tabFilterBtn)  tabFilterBtn.addEventListener('click', switchToStage2);
+
+        // Stage 2 File Drop & Selection
+        const dropZone          = document.getElementById('dropZone');
+        const filterFileInput   = document.getElementById('filterFileInput');
+        const selectedFileInfo  = document.getElementById('selectedFileInfo');
+        const selectedFileName  = document.getElementById('selectedFileName');
+        const selectedFileSize  = document.getElementById('selectedFileSize');
+        const removeFileBtn     = document.getElementById('removeFileBtn');
+        const filterUploadForm  = document.getElementById('filterUploadForm');
+        const startFilterBtn    = document.getElementById('startFilterBtn');
+
+        const filterProgressCard = document.getElementById('filterProgressCard');
+        const filterProgressBar  = document.getElementById('filterProgressBar');
+        const filterStatusText   = document.getElementById('filterStatusText');
+        const filterPercentageText = document.getElementById('filterPercentageText');
+
+        const filterTotalCount     = document.getElementById('filterTotalCount');
+        const filterProcessedCount = document.getElementById('filterProcessedCount');
+        const filterValidCount     = document.getElementById('filterValidCount');
+        const filterDroppedCount   = document.getElementById('filterDroppedCount');
+
+        const filterResultsCard    = document.getElementById('filterResultsCard');
+        const filterResultsCountBadge = document.getElementById('filterResultsCountBadge');
+        const filterDownloadLink   = document.getElementById('filterDownloadLink');
+        const filterDownloadDroppedLink = document.getElementById('filterDownloadDroppedLink');
+        const filterTableBody      = document.getElementById('filterTableBody');
+
+        let filterPollInterval = null;
+
+        if (dropZone && filterFileInput) {
+            dropZone.addEventListener('click', (e) => {
+                if (e.target.closest('#removeFileBtn')) return;
+                filterFileInput.click();
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.add('border-emerald-400', 'bg-slate-800');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.remove('border-emerald-400', 'bg-slate-800');
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files && files.length > 0) {
+                    filterFileInput.files = files;
+                    updateFileBadge(files[0]);
+                }
+            });
+
+            filterFileInput.addEventListener('change', () => {
+                if (filterFileInput.files && filterFileInput.files.length > 0) {
+                    updateFileBadge(filterFileInput.files[0]);
+                }
+            });
+        }
+
+        function updateFileBadge(file) {
+            if (!file) return;
+            selectedFileName.textContent = file.name;
+            const sizeKb = (file.size / 1024).toFixed(1);
+            selectedFileSize.textContent = `(${sizeKb} KB)`;
+            selectedFileInfo.classList.remove('hidden');
+        }
+
+        if (removeFileBtn) {
+            removeFileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                filterFileInput.value = '';
+                selectedFileInfo.classList.add('hidden');
+            });
+        }
+
+        if (filterUploadForm) {
+            filterUploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!filterFileInput.files || filterFileInput.files.length === 0) {
+                    alert('Please select or drop an Excel (.xlsx) or CSV file to verify.');
+                    return;
+                }
+
+                startFilterBtn.disabled = true;
+                startFilterBtn.innerHTML = `
+                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Verifying Inboxes (20 Concurrent Threads)...</span>
+                `;
+
+                filterProgressCard.classList.remove('hidden');
+                filterResultsCard.classList.add('hidden');
+                filterProgressBar.style.width = '5%';
+                filterPercentageText.textContent = '5%';
+                filterStatusText.textContent = 'Starting multi-threaded deep filtration...';
+
+                const formData = new FormData(filterUploadForm);
+
+                try {
+                    const resp = await fetch('/upload-and-filter', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await resp.json();
+
+                    if (!data.success) {
+                        alert(data.error || 'Failed to start filtration.');
+                        resetFilterBtn();
+                        filterProgressCard.classList.add('hidden');
+                        return;
+                    }
+
+                    startFilterTaskPolling(data.task_id);
+
+                } catch (err) {
+                    console.error('Filter upload error:', err);
+                    alert('Connection error. Please ensure the server is running.');
+                    resetFilterBtn();
+                    filterProgressCard.classList.add('hidden');
+                }
+            });
+        }
+
+        function resetFilterBtn() {
+            startFilterBtn.disabled = false;
+            startFilterBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Start Deep Filtration & Verification</span>
+            `;
+        }
+
+        function startFilterTaskPolling(taskId) {
+            if (filterPollInterval) clearInterval(filterPollInterval);
+
+            filterPollInterval = setInterval(async () => {
+                try {
+                    const resp = await fetch(`/filter-status/${taskId}`);
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+
+                    const pct = data.percentage || 0;
+                    filterProgressBar.style.width = `${pct}%`;
+                    filterPercentageText.textContent = `${pct}%`;
+                    filterStatusText.textContent = data.message || 'Validating records...';
+
+                    filterTotalCount.textContent     = data.total || 0;
+                    filterProcessedCount.textContent = data.processed || 0;
+                    filterValidCount.textContent     = data.valid_count || 0;
+                    filterDroppedCount.textContent   = data.dropped_count || 0;
+
+                    if (data.status === 'done') {
+                        clearInterval(filterPollInterval);
+                        filterPollInterval = null;
+                        resetFilterBtn();
+                        filterStatusText.textContent = `Completed! ${data.valid_count} 100% deliverable inboxes confirmed.`;
+                        filterStatusText.classList.remove('animate-pulse');
+
+                        // Show Results Card
+                        filterResultsCountBadge.textContent = `${data.valid_count} Active Verified Inboxes`;
+                        filterDownloadLink.href = `/download-filtered/${data.excel_filename}`;
+
+                        if (data.dropped_filename) {
+                            filterDownloadDroppedLink.href = `/download-dropped/${data.dropped_filename}`;
+                            filterDownloadDroppedLink.classList.remove('hidden');
+                        } else {
+                            filterDownloadDroppedLink.classList.add('hidden');
+                        }
+
+                        // Populate preview table
+                        filterTableBody.innerHTML = '';
+                        if (data.preview && data.preview.length > 0) {
+                            data.preview.forEach(row => {
+                                const tr = document.createElement('tr');
+                                tr.className = 'hover:bg-slate-750 border-b border-slate-700';
+                                tr.innerHTML = `
+                                    <td class="px-4 py-3 max-w-md truncate" title="${row['Paper Title'] || ''}">${row['Paper Title'] || ''}</td>
+                                    <td class="px-4 py-3 font-semibold text-white">${row['Author Name'] || ''}</td>
+                                    <td class="px-4 py-3 text-emerald-400 font-mono text-xs">${row['Email ID'] || ''}</td>
+                                    <td class="px-4 py-3 font-mono text-xs text-slate-400">${row['DOI'] || ''}</td>
+                                `;
+                                filterTableBody.appendChild(tr);
+                            });
+                        }
+
+                        filterResultsCard.classList.remove('hidden');
+                    } else if (data.status === 'error') {
+                        clearInterval(filterPollInterval);
+                        filterPollInterval = null;
+                        resetFilterBtn();
+                        alert(`Filtration failed: ${data.message || data.error}`);
+                    }
+
+                } catch (e) {
+                    console.warn('Filter polling error:', e);
+                }
+            }, 1200);
+        }
     </script>
 </body>
 </html>

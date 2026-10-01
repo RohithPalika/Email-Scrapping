@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+*.log.*
+extraction.log
+extraction.lock
+.env
+venv/
+.venv/
+WS2.0/downloads/Pdf Files/
+WS2.0/downloads/author details/
+

@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import logging
 import requests
@@ -54,11 +55,13 @@ def fetch_biorxiv_papers(topic, limit, target_dir, filters=None):
     year_from   = filters.get("year_from")
     year_to     = filters.get("year_to")
 
-    # Build Crossref date filter
-    # Default: 2020 onwards (bioRxiv is a preprint server — older content is rare)
-    from_date = f"{year_from}-01-01" if year_from else "2020-01-01"
-    until_date= f"{year_to}-12-31"   if year_to   else "2099-12-31"
-    crossref_filter = f"type:posted-content,from-pub-date:{from_date},until-pub-date:{until_date},prefix:10.1101"
+    # Build Crossref filter for bioRxiv/medRxiv preprints
+    filter_parts = ["prefix:10.1101", "type:posted-content"]
+    if year_from:
+        filter_parts.append(f"from-pub-date:{year_from}-01-01")
+    if year_to:
+        filter_parts.append(f"until-pub-date:{year_to}-12-31")
+    crossref_filter = ",".join(filter_parts)
 
     records = []
     saved_count = 0
@@ -113,7 +116,7 @@ def fetch_biorxiv_papers(topic, limit, target_dir, filters=None):
                 if full_name:
                     authors_meta.append(full_name)
 
-            if not doi or doi == "N/A":
+            if not doi or doi == "N/A" or not re.match(r"^10\.1101/\d{4}\.", doi):
                 continue
 
             pdf_name = f"biorxiv_paper_{saved_count + 1}.pdf"

@@ -9,6 +9,8 @@ _ELIFE_TYPE_MAP = {
     "Article":          "research-article",
     "Review":           "review-article",
     "Systematic Review":"review-article",
+    "Case Reports":     "research-article",
+    "Case Report":      "research-article",
     "Brief Report":     "short-report",
 }
 

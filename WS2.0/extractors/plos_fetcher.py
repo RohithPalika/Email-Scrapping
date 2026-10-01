@@ -9,6 +9,8 @@ _PLOS_TYPE_MAP = {
     "Article":          "Research Article",
     "Review":           "Review",
     "Systematic Review":"Systematic Review",
+    "Case Reports":     "Case Report",
+    "Case Report":      "Case Report",
     "Brief Report":     "Short Report",
 }
 
