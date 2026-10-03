@@ -1448,6 +1448,9 @@
                 filterStatusText.textContent = 'Starting multi-threaded deep filtration...';
 
                 const formData = new FormData(filterUploadForm);
+                // Inherit any active country filters
+                const checkedCountries = [...document.querySelectorAll('.country-cb:checked')].map(c => c.value);
+                checkedCountries.forEach(c => formData.append('countries[]', c));
 
                 try {
                     const resp = await fetch('/upload-and-filter', {

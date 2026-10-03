@@ -130,10 +130,10 @@ def fetch_arxiv_papers(topic, limit, target_dir, filters=None):
     for i, entry in enumerate(entries[:limit]):
         # --- Extract metadata ---
         title_el = entry.find(f"{{{ATOM_NS}}}title")
-        title = title_el.text.strip().replace("\n", " ") if title_el is not None else "Untitled"
+        title = title_el.text.strip().replace("\n", " ") if (title_el is not None and title_el.text) else "Untitled"
 
         id_el = entry.find(f"{{{ATOM_NS}}}id")
-        arxiv_id_url = id_el.text.strip() if id_el is not None else ""
+        arxiv_id_url = id_el.text.strip() if (id_el is not None and id_el.text) else ""
 
         # DOI — use arXiv ID URL as fallback
         doi = arxiv_id_url

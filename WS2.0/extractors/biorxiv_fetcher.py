@@ -127,9 +127,11 @@ def fetch_biorxiv_papers(topic, limit, target_dir, filters=None):
             # Since both use the 10.1101 prefix, a paper could be on either server.
             # We try biorxiv first, then medrxiv if it fails (404).
             success = False
+            found_server = "biorxiv"
             for server in SERVERS:
                 pdf_url = f"https://www.{server}.org/content/{doi}.full.pdf"
                 if _download_pdf_with_retry(pdf_url, file_path, retries=0):
+                    found_server = server
                     success = True
                     break
                 # Polite delay between fallback attempts
@@ -143,7 +145,7 @@ def fetch_biorxiv_papers(topic, limit, target_dir, filters=None):
                     "title": title,
                     "authors": authors_meta,
                     "doi": doi,
-                    "source_journal": server.capitalize()
+                    "source_journal": found_server.capitalize()
                 })
             else:
                 log.warning(f"      -> Skipped (not found on either server or download failed).")

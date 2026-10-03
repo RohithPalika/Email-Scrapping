@@ -140,7 +140,7 @@ def fetch_pubmed_papers(topic, limit, target_dir, filters=None):
 
             # Extract Journal Name
             journal_el = article_tag.find(".//Journal/Title")
-            journal = journal_el.text.strip() if journal_el is not None else "PubMed"
+            journal = journal_el.text.strip() if (journal_el is not None and journal_el.text) else "PubMed"
 
             # Extract DOI & PMCID
             doi = ""
@@ -148,9 +148,9 @@ def fetch_pubmed_papers(topic, limit, target_dir, filters=None):
             for aid in article_tag.findall(".//ArticleId"):
                 id_type = aid.get("IdType")
                 if id_type == "doi":
-                    doi = aid.text.strip()
+                    doi = aid.text.strip() if aid.text else ""
                 elif id_type == "pmc":
-                    pmcid = aid.text.strip()
+                    pmcid = aid.text.strip() if aid.text else ""
 
             # Extract Authors & Affiliations
             authors_meta = []

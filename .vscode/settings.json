@@ -1,0 +1,8 @@
+{
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/WS2.0"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/WS2.0"
+  ]
+}

@@ -30,6 +30,11 @@ from extractors.crossref_fetcher import fetch_crossref_papers
 from extractors.email_verifier import (
     check_email_deliverability,
     clean_and_repair_email,
+    clean_paper_title,
+    clean_author_name,
+    is_valid_author_name,
+    is_country_allowed,
+    normalize_and_realign_records,
     batch_verify_records,
     verify_single_record,
 )
@@ -294,10 +299,23 @@ def _record_attempted_doi(doi_key):
 
 
 def save_new_emails_to_master(new_rows):
-    """Append newly found email rows to the master CSV file."""
+    """Append newly found email rows to the master CSV file after sanitizing them."""
     if not new_rows:
         return
-    new_df = pd.DataFrame(new_rows)
+    sanitized_rows = []
+    for r in new_rows:
+        row_copy = dict(r)
+        if "Paper Title" in row_copy:
+            row_copy["Paper Title"] = clean_paper_title(row_copy["Paper Title"])
+        if "Author Name" in row_copy:
+            row_copy["Author Name"] = clean_author_name(row_copy["Author Name"], email=str(row_copy.get("Email ID", "")))
+        if "Email ID" in row_copy:
+            row_copy["Email ID"] = str(row_copy["Email ID"]).strip().lower()
+        if "DOI" in row_copy:
+            row_copy["DOI"] = re.sub(r'[\r\n\t]+', '', str(row_copy["DOI"])).strip()
+        sanitized_rows.append(row_copy)
+
+    new_df = pd.DataFrame(sanitized_rows)
     # utf-8-sig = UTF-8 with BOM — Excel on Windows opens it without garbled characters.
     # mode='a' appends; header only when the file is new/empty.
     file_is_empty = (
@@ -403,77 +421,135 @@ def unwrap_broken_emails(text):
 
 
 def extract_full_names_from_pdf(text):
+    """
+    Extracts high-confidence author candidates from text.
+    Evaluates lines strictly independently to prevent multi-line / cross-header pollution.
+    """
+    if not text:
+        return []
     candidate_names = []
-    potential_blocks = re.findall(r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', text)
-    blacklist = {
-        "Indian Journal", "Medical Research", "Medical College", "Research Centre",
-        "Artificial Intelligence", "All Rights", "Creative Commons", "Open Access",
-        "Author Response", "Authors Response", "Received January", "Accepted February",
-        "Published June", "Conflicts Of", "Financial Support", "Public Health", "BMJ Open",
+    blacklist_words = {
+        "indian journal", "medical research", "medical college", "research centre",
+        "artificial intelligence", "all rights", "creative commons", "open access",
+        "author response", "authors response", "received january", "accepted february",
+        "published june", "conflicts of", "financial support", "public health", "bmj open",
+        "case report", "case reports", "control study", "case study", "mini review",
+        "comprehensive review", "systematic review", "review", "original research",
+        "abstract", "correspondence", "corresponding author", "email", "e-mail",
+        "department", "division", "faculty", "institute", "hospital", "university",
+        "college", "school", "center", "centre", "journal", "students", "medical students",
+        "synthetic data", "face image", "acne vulgaris", "in this work", "inthiswork"
     }
-    for name in potential_blocks:
-        if name not in blacklist and len(name.split()) in [2, 3, 4]:
-            if not any(
-                b.lower() in name.lower()
-                for b in ["department", "university", "hospital", "institute"]
-            ):
-                candidate_names.append(name.strip())
+
+    # Evaluate line-by-line — NEVER combine text across newlines!
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or len(line) < 3 or len(line) > 100:
+            continue
+        line_lower = line.lower()
+        if any(b in line_lower for b in blacklist_words):
+            continue
+
+        # Match 2 to 4 capitalized words separated strictly by horizontal spaces/tabs
+        potential_blocks = re.findall(r'\b([A-Z][a-z]{1,20}(?:[ \t]+[A-Z][a-z]{1,20}){1,3})\b', line)
+        for name in potential_blocks:
+            clean_name = re.sub(r'[ \t]+', ' ', name).strip()
+            name_lower = clean_name.lower()
+            if not any(b in name_lower for b in blacklist_words) and len(clean_name.split()) in [2, 3, 4]:
+                if not any(
+                    b in name_lower
+                    for b in ["department", "university", "hospital", "institute", "journal", "college", "school", "faculty"]
+                ):
+                    candidate_names.append(clean_name)
     return list(dict.fromkeys(candidate_names))
 
 
-def match_author_for_email(email, candidate_authors, initials=None):
+def match_author_for_email(email, candidate_authors, initials=None, metadata_authors=None):
     """
-    Attempts to match an email address to a known author from candidate_authors.
-    Returns the matched author's full name, or None if no match can be established.
-    NEVER returns 'Unknown'.
+    Attempts to match an email address to a known author.
+    Prioritizes official publisher metadata_authors first, then falls back to candidate_authors.
+    Strictly sanitizes and validates author names.
+    NEVER returns 'Unknown' or multi-line corrupted strings.
     """
-    if not email or not candidate_authors:
+    if not email:
         return None
 
-    # Filter out empty or 'unknown' sentinel values
-    valid_authors = [
-        a.strip() for a in candidate_authors
-        if a and a.strip().lower() not in ("unknown", "na", "n/a", "none", "null")
-    ]
-    if not valid_authors:
-        return None
+    try:
+        def _clean(name):
+            return clean_author_name(name, email=email)
 
-    clean_uname = re.sub(r'[^a-z]', '', email.split('@')[0].lower())
+        # 1. Highest priority: official publisher metadata authors
+        meta_authors_clean = [_clean(a) for a in (metadata_authors or []) if a]
+        meta_authors_clean = [a for a in meta_authors_clean if is_valid_author_name(a)]
 
-    # Strategy 1: Match surname or given name parts (>= 3 chars) in email username
-    for author in valid_authors:
-        raw_parts = [re.sub(r'[^a-z]', '', p.lower()) for p in author.split()]
-        name_parts = [p for p in raw_parts if len(p) >= 2]
-        if any(len(p) >= 3 and p in clean_uname for p in name_parts):
-            return author
+        clean_uname = re.sub(r'[^a-z]', '', email.split('@')[0].lower())
+        if not clean_uname:
+            clean_uname = email.split('@')[0].lower().strip()
 
-    # Strategy 2: Match initials combinations (e.g. jsmith -> J. Smith, jdoe -> John Doe)
-    for author in valid_authors:
-        raw_parts = [re.sub(r'[^a-z]', '', p.lower()) for p in author.split()]
-        name_parts = [p for p in raw_parts if len(p) >= 2]
-        if len(name_parts) >= 2:
-            first_init_last = name_parts[0][0] + name_parts[-1]
-            if first_init_last in clean_uname:
+        # Strategy 1A: Match surname or given name parts in official metadata
+        for author in meta_authors_clean:
+            raw_parts = [re.sub(r'[^a-z]', '', p.lower()) for p in author.split()]
+            name_parts = [p for p in raw_parts if len(p) >= 3]
+            if any(p in clean_uname for p in name_parts):
                 return author
-            first_last_init = name_parts[0] + name_parts[-1][0]
-            if first_last_init in clean_uname:
-                return author
-            if len(name_parts) >= 3:
-                init2_last = name_parts[0][0] + name_parts[1][0] + name_parts[-1]
-                if init2_last in clean_uname:
+
+        # Strategy 2A: Match initials combinations in official metadata
+        for author in meta_authors_clean:
+            raw_parts = [re.sub(r'[^a-z]', '', p.lower()) for p in author.split()]
+            name_parts = [p for p in raw_parts if len(p) >= 2]
+            if len(name_parts) >= 2 and len(name_parts[0]) > 0 and len(name_parts[-1]) > 0:
+                first_init_last = name_parts[0][0] + name_parts[-1]
+                if first_init_last in clean_uname:
+                    return author
+                first_last_init = name_parts[0] + name_parts[-1][0]
+                if first_last_init in clean_uname:
                     return author
 
-    # Strategy 3: Explicit author initials in brackets (e.g. email (JD))
-    if initials:
-        clean_inits = initials.strip().upper()
-        for author in valid_authors:
-            author_initials = "".join([p[0].upper() for p in author.split() if p])
-            if clean_inits == author_initials:
+        # Strategy 3A: Single-author paper confirmed in metadata
+        if len(meta_authors_clean) == 1:
+            return meta_authors_clean[0]
+
+        # 2. Second priority: candidate authors extracted from PDF text
+        candidates_clean = [_clean(a) for a in (candidate_authors or []) if a]
+        candidates_clean = [a for a in candidates_clean if is_valid_author_name(a)]
+
+        for author in candidates_clean:
+            raw_parts = [re.sub(r'[^a-z]', '', p.lower()) for p in author.split()]
+            name_parts = [p for p in raw_parts if len(p) >= 3]
+            if any(p in clean_uname for p in name_parts):
                 return author
 
-    # Strategy 4: If single-author paper, the email on that paper belongs to that author
-    if len(valid_authors) == 1:
-        return valid_authors[0]
+        for author in candidates_clean:
+            raw_parts = [re.sub(r'[^a-z]', '', p.lower()) for p in author.split()]
+            name_parts = [p for p in raw_parts if len(p) >= 2]
+            if len(name_parts) >= 2 and len(name_parts[0]) > 0 and len(name_parts[-1]) > 0:
+                first_init_last = name_parts[0][0] + name_parts[-1]
+                if first_init_last in clean_uname:
+                    return author
+                first_last_init = name_parts[0] + name_parts[-1][0]
+                if first_last_init in clean_uname:
+                    return author
+
+        # Strategy 4: Initials match
+        if initials:
+            clean_inits = initials.strip().upper()
+            for author in (meta_authors_clean + candidates_clean):
+                author_initials = "".join([p.strip()[0].upper() for p in author.split() if p and p.strip() and p.strip()[0].isalpha()])
+                if clean_inits and clean_inits == author_initials:
+                    return author
+
+        # 3. Third priority: Derive readable person name from structured academic email
+        # e.g. firstname.lastname@institution.edu -> "Firstname Lastname"
+        uname_raw = email.split('@')[0]
+        parts = [p for p in re.split(r'[^a-zA-Z]+', uname_raw) if len(p) >= 2]
+        parts = [p.capitalize() for p in parts if p.lower() not in ('dr', 'prof', 'mr', 'ms', 'md', 'phd')]
+        if len(parts) >= 2:
+            derived = " ".join(parts)
+            if is_valid_author_name(derived):
+                return derived
+
+    except Exception as e:
+        log.warning(f"[match_author_for_email] Guarded against matching exception for {email}: {e}")
 
     return None
 
@@ -502,7 +578,6 @@ def extract_author_email_pairs(file_path, metadata_authors):
                 pairs = []
                 unwrapped = unwrap_broken_emails(text_block)
                 pdf_names = extract_full_names_from_pdf(unwrapped)
-                all_candidate_authors = list(dict.fromkeys(metadata_authors + pdf_names))
                 raw_matches = re.findall(
                     r'([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)(?:\s*\(([A-Z]+)\))?',
                     unwrapped
@@ -511,7 +586,12 @@ def extract_author_email_pairs(file_path, metadata_authors):
                     clean_email = clean_and_validate_email(raw_email)
                     if not clean_email:
                         continue
-                    matched_author = match_author_for_email(clean_email, all_candidate_authors, initials)
+                    matched_author = match_author_for_email(
+                        clean_email,
+                        candidate_authors=pdf_names,
+                        initials=initials,
+                        metadata_authors=metadata_authors
+                    )
                     if not matched_author:
                         continue
                     if clean_email not in [p[1] for p in pairs]:
@@ -550,6 +630,98 @@ SOURCE_FETCHERS = {
 }
 
 
+def format_and_save_excel(data, excel_path, sheet_name="Authors"):
+    """
+    Saves and formats records or DataFrame into a pristine, professionally formatted Excel workbook:
+    - Enforces strict sequential 4-column order: Paper Title, Author Name, Email ID, DOI
+    - Thoroughly sanitizes all fields (eliminates newlines, HTML entities, and rogue spaces)
+    - Professional executive styling:
+      * Deep Navy header (#1F4E79) with bold white text
+      * Alternating subtle zebra rows for effortless scanning
+      * Vertically centered alignment (20pt row height)
+      * Custom fitted column widths
+      * Freeze panes enabled on row 2 so headers remain visible when scrolling
+      * Excel auto-filters applied
+    """
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    if isinstance(data, pd.DataFrame):
+        df = data.copy()
+    else:
+        df = pd.DataFrame(data)
+
+    target_cols = ["Paper Title", "Author Name", "Email ID", "DOI"]
+    for col in target_cols:
+        if col not in df.columns:
+            df[col] = ""
+    df = df[target_cols]
+
+    # Sanitize each column
+    df["Paper Title"] = [clean_paper_title(t) for t in df["Paper Title"]]
+    cleaned_authors = []
+    for _, row in df.iterrows():
+        cleaned_authors.append(clean_author_name(row["Author Name"], email=str(row["Email ID"])))
+    df["Author Name"] = cleaned_authors
+    df["Email ID"] = [str(e).strip().lower() for e in df["Email ID"]]
+    df["DOI"] = [
+        re.sub(r'[\r\n\t]+', '', str(d)).strip() if pd.notna(d) and str(d) != "nan" else ""
+        for d in df["DOI"]
+    ]
+
+    # Write using openpyxl
+    with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+        ws = writer.sheets[sheet_name]
+
+        header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        header_align = Alignment(horizontal="center", vertical="center", wrap_text=False)
+
+        data_font = Font(name="Calibri", size=10, color="000000")
+        zebra_fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
+        white_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+        border_side = Side(style="thin", color="E5E7EB")
+        data_border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
+
+        # Style Header Row
+        ws.row_dimensions[1].height = 26
+        for col_idx in range(1, 5):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_align
+            cell.border = data_border
+
+        # Style Data Rows
+        num_rows = len(df)
+        for r_idx in range(2, num_rows + 2):
+            ws.row_dimensions[r_idx].height = 20
+            row_fill = zebra_fill if (r_idx % 2 == 0) else white_fill
+            for c_idx in range(1, 5):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.font = data_font
+                cell.fill = row_fill
+                cell.border = data_border
+                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=False)
+
+        # Set optimal column widths
+        col_widths = {
+            1: 65,  # Paper Title
+            2: 28,  # Author Name
+            3: 32,  # Email ID
+            4: 35,  # DOI
+        }
+        for c_idx, width in col_widths.items():
+            ws.column_dimensions[get_column_letter(c_idx)].width = width
+
+        # Freeze panes at A2 so header stays sticky
+        ws.freeze_panes = "A2"
+        # Enable Excel Auto-Filter
+        if num_rows > 0:
+            ws.auto_filter.ref = f"A1:D{num_rows + 1}"
+
+
 # -----------------------------------------------------------
 # Background Extraction Worker
 # -----------------------------------------------------------
@@ -583,6 +755,7 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
     max_papers = max(1, min(int(max_papers), 500))
 
     filters = filters or {}
+    selected_countries = filters.get("countries", [])
     short_id = task_id[:8]
     rows = []           # All rows successfully written this run (for Excel output)
     pending_rows = []   # Batch buffer — flushed every 5 papers
@@ -751,17 +924,33 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
                         if not clean_email or clean_email in seen_emails:
                             continue
 
-                        matched_author = match_author_for_email(clean_email, item.get("authors", []))
+                        matched_author = match_author_for_email(clean_email, item.get("authors", []), metadata_authors=item.get("authors", []))
                         if not matched_author:
+                            continue
+
+                        clean_auth = clean_author_name(matched_author, email=clean_email)
+                        if not clean_auth or not is_valid_author_name(clean_auth):
+                            continue
+
+                        # Strict country filtering (blocks Chinese domains/authors and non-target countries)
+                        is_ok, country_reason = is_country_allowed(
+                            email=clean_email,
+                            allowed_countries=selected_countries,
+                            author_name=clean_auth,
+                            paper_title=item.get("title", ""),
+                            doi=item_doi_raw
+                        )
+                        if not is_ok:
+                            log.info(f"[CountryFilter] Excluded email {clean_email}: {country_reason}")
                             continue
 
                         pending_rows.append({
                             "PDF File Name": item["pdf_name"],
                             "Source Journal": item.get("source_journal", source_label),
-                            "Paper Title": item["title"],
-                            "Author Name": matched_author,
+                            "Paper Title": clean_paper_title(item["title"]),
+                            "Author Name": clean_auth,
                             "Email ID": clean_email,
-                            "DOI": item_doi_raw,
+                            "DOI": re.sub(r'[\r\n\t]+', '', str(item_doi_raw)).strip(),
                         })
                         seen_emails.add(clean_email)
                         # Grace point: capture ALL valid authors per article (no break)
@@ -776,18 +965,32 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
                 # PDF parsing
                 pairs = extract_author_email_pairs(item["file_path"], item.get("authors", []))
                 for author, email in pairs:
-                    if not author or author.strip().lower() in ("unknown", "na", "n/a", "none", "null", ""):
+                    clean_auth = clean_author_name(author, email=email)
+                    if not clean_auth or not is_valid_author_name(clean_auth):
                         continue
                     if email in seen_emails:
                         log.debug(f"[Dedup] Skipped duplicate email: {email}")
                         continue
+
+                    # Strict country filtering (blocks Chinese domains/authors and non-target countries)
+                    is_ok, country_reason = is_country_allowed(
+                        email=email,
+                        allowed_countries=selected_countries,
+                        author_name=clean_auth,
+                        paper_title=item.get("title", ""),
+                        doi=item_doi_raw
+                    )
+                    if not is_ok:
+                        log.info(f"[CountryFilter] Excluded email {email}: {country_reason}")
+                        continue
+
                     pending_rows.append({
                         "PDF File Name": item["pdf_name"],
                         "Source Journal": item.get("source_journal", source_label),
-                        "Paper Title": item["title"],
-                        "Author Name": author,
+                        "Paper Title": clean_paper_title(item["title"]),
+                        "Author Name": clean_auth,
                         "Email ID": email,
-                        "DOI": item_doi_raw,
+                        "DOI": re.sub(r'[\r\n\t]+', '', str(item_doi_raw)).strip(),
                     })
                     seen_emails.add(email)
                     # Grace point: capture ALL valid authors per article (no break)
@@ -860,16 +1063,7 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
         excel_path = os.path.join(EXCEL_BASE_DIR, excel_filename)
 
         df = pd.DataFrame(rows)
-        # Strictly format final output Excel to the 4 requested columns
-        target_cols = [c for c in ["Paper Title", "Author Name", "Email ID", "DOI"] if c in df.columns]
-        if target_cols:
-            df = df[target_cols]
-        with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Authors")
-            ws = writer.sheets["Authors"]
-            for col in ws.columns:
-                max_len = max(len(str(cell.value or "")) for cell in col)
-                ws.column_dimensions[col[0].column_letter].width = max(max_len + 3, 14)
+        format_and_save_excel(df, excel_path, sheet_name="Authors")
 
         status_msg = f"Extraction stopped early. {len(rows)} contacts saved." if was_stopped else f"Extraction complete. {len(rows)} contacts found."
         log.info(f"[Task {short_id}] {status_msg} {len(rows)} rows written to {excel_filename}")
@@ -1234,7 +1428,7 @@ FILTER_TASKS = {}
 FILTER_TASKS_LOCK = threading.Lock()
 
 
-def _run_filter_task(task_id, file_path, original_filename, api_key=None):
+def _run_filter_task(task_id, file_path, original_filename, api_key=None, allowed_countries=None):
     try:
         # Read Excel or CSV file
         if original_filename.lower().endswith(".csv"):
@@ -1242,7 +1436,9 @@ def _run_filter_task(task_id, file_path, original_filename, api_key=None):
         else:
             df = pd.read_excel(file_path)
 
-        records = df.to_dict(orient="records")
+        raw_records = df.to_dict(orient="records")
+        # Pre-pass: Deep Realignment & Sanitization of shifted/unaligned fields
+        records = normalize_and_realign_records(raw_records)
         total = len(records)
 
         with FILTER_TASKS_LOCK:
@@ -1265,6 +1461,7 @@ def _run_filter_task(task_id, file_path, original_filename, api_key=None):
         valid_records, dropped_records = batch_verify_records(
             records,
             api_key=api_key,
+            allowed_countries=allowed_countries,
             max_workers=20,
             progress_callback=_progress
         )
@@ -1277,15 +1474,11 @@ def _run_filter_task(task_id, file_path, original_filename, api_key=None):
                 clean_df[col] = ""
         clean_df = clean_df[target_cols]
 
-        clean_filename = f"verified_pristine_authors_{task_id[:8]}.xlsx"
+        # Retain original uploaded filename and append '_updated.xlsx' (no random/UUID names)
+        base_name = os.path.splitext(os.path.basename(original_filename))[0] if original_filename else "verified_authors"
+        clean_filename = f"{base_name}_updated.xlsx"
         clean_path = os.path.join(EXCEL_BASE_DIR, clean_filename)
-
-        with pd.ExcelWriter(clean_path, engine="openpyxl") as writer:
-            clean_df.to_excel(writer, index=False, sheet_name="Verified Authors")
-            ws = writer.sheets["Verified Authors"]
-            for col in ws.columns:
-                max_len = max(len(str(cell.value or "")) for cell in col)
-                ws.column_dimensions[col[0].column_letter].width = max(max_len + 4, 15)
+        format_and_save_excel(clean_df, clean_path, sheet_name="Verified Authors")
 
         dropped_filename = None
         if dropped_records:
@@ -1294,7 +1487,7 @@ def _run_filter_task(task_id, file_path, original_filename, api_key=None):
                 r = dict(item.get("Record", {}))
                 r["Rejection Reason"] = item.get("Reason", "Unknown")
                 dropped_rows.append(r)
-            dropped_filename = f"dropped_audit_{task_id[:8]}.csv"
+            dropped_filename = f"{base_name}_dropped_audit.csv"
             dropped_path = os.path.join(EXCEL_BASE_DIR, dropped_filename)
             pd.DataFrame(dropped_rows).to_csv(dropped_path, index=False, encoding="utf-8-sig")
 
@@ -1329,17 +1522,23 @@ def _run_filter_task(task_id, file_path, original_filename, api_key=None):
 @app.route("/upload-and-filter", methods=["POST"])
 def upload_and_filter():
     file = request.files.get("file")
-    if not file or file.filename == "":
+    if not file or not file.filename:
         return jsonify({"error": "No file uploaded. Please upload an Excel (.xlsx) or CSV file."}), 400
 
-    filename = file.filename.lower()
+    orig_filename = str(file.filename)
+    filename = orig_filename.lower()
     if not (filename.endswith(".xlsx") or filename.endswith(".xls") or filename.endswith(".csv")):
         return jsonify({"error": "Unsupported file format. Please upload .xlsx or .csv"}), 400
 
     api_key = request.form.get("api_key", "").strip() or None
+    allowed_countries = request.form.getlist("countries[]")
+    if not allowed_countries:
+        raw_c = request.form.get("countries", "").strip()
+        if raw_c:
+            allowed_countries = [c.strip() for c in raw_c.split(",") if c.strip()]
 
     task_id = str(uuid.uuid4())
-    temp_path = os.path.join(DOWNLOADS_DIR, f"temp_upload_{task_id}_{file.filename}")
+    temp_path = os.path.join(DOWNLOADS_DIR, f"temp_upload_{task_id}_{orig_filename}")
     file.save(temp_path)
 
     with FILTER_TASKS_LOCK:
@@ -1359,7 +1558,7 @@ def upload_and_filter():
 
     t = threading.Thread(
         target=_run_filter_task,
-        args=(task_id, temp_path, file.filename, api_key),
+        args=(task_id, temp_path, orig_filename, api_key, allowed_countries),
         daemon=True
     )
     t.start()
@@ -1380,7 +1579,7 @@ def filter_task_status(task_id):
 def download_filtered_excel(filename):
     file_path = os.path.join(EXCEL_BASE_DIR, filename)
     if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
+        return send_file(file_path, as_attachment=True, download_name=filename)
     return "File not found", 404
 
 
@@ -1388,7 +1587,7 @@ def download_filtered_excel(filename):
 def download_dropped_csv(filename):
     file_path = os.path.join(EXCEL_BASE_DIR, filename)
     if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
+        return send_file(file_path, as_attachment=True, download_name=filename)
     return "File not found", 404
 
 

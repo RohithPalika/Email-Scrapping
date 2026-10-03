@@ -22,6 +22,7 @@ try:
     from bs4 import BeautifulSoup
     _BS4_AVAILABLE = True
 except ImportError:
+    BeautifulSoup = None  # type: ignore
     _BS4_AVAILABLE = False
     log.warning(
         "[iMedPub] beautifulsoup4 not installed. "
@@ -130,6 +131,8 @@ def _parse_article_page(url, saved_count, target_dir):
     Fetch an individual article page and extract title, authors, DOI, and PDF.
     Returns a record dict on success, or None on failure.
     """
+    if not _BS4_AVAILABLE or BeautifulSoup is None:
+        return None
     try:
         resp = requests.get(url, headers=_HEADERS, timeout=25)
         if resp.status_code != 200:
@@ -149,8 +152,9 @@ def _parse_article_page(url, saved_count, target_dir):
     else:
         # 2. Any <a> link ending in .pdf
         for a in soup.find_all("a", href=True):
-            if a["href"].lower().endswith(".pdf"):
-                pdf_url = urljoin(url, a["href"])
+            href_val = str(a.get("href", ""))
+            if href_val.lower().endswith(".pdf"):
+                pdf_url = urljoin(url, href_val)
                 break
 
     if not pdf_url:
@@ -160,7 +164,7 @@ def _parse_article_page(url, saved_count, target_dir):
     title = ""
     title_meta = soup.find("meta", {"name": "citation_title"})
     if title_meta and title_meta.get("content"):
-        title = title_meta["content"].strip()
+        title = str(title_meta["content"]).strip()
     else:
         h1 = soup.find("h1")
         if h1:
@@ -170,7 +174,7 @@ def _parse_article_page(url, saved_count, target_dir):
     doi = "N/A"
     doi_meta = soup.find("meta", {"name": "citation_doi"})
     if doi_meta and doi_meta.get("content"):
-        doi = doi_meta["content"].strip()
+        doi = str(doi_meta["content"]).strip()
     else:
         doi_match = re.search(r'(10\.\d{4,9}/[-._;()/:A-Z0-9]+)', resp.text, re.I)
         if doi_match:
@@ -178,7 +182,7 @@ def _parse_article_page(url, saved_count, target_dir):
 
     # --- Authors ---
     authors = [
-        m["content"].strip()
+        str(m["content"]).strip()
         for m in soup.find_all("meta", {"name": "citation_author"})
         if m.get("content")
     ]
@@ -213,6 +217,9 @@ def _fetch_imedpub_bs4(topic, limit, target_dir):
     """
     BeautifulSoup-based iMedPub fetcher with pagination support.
     """
+    if not _BS4_AVAILABLE or BeautifulSoup is None:
+        return []
+
     records = []
     saved_count = 0
     page = 1

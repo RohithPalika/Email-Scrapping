@@ -146,6 +146,7 @@ def fetch_openalex_papers(topic, limit, target_dir, filters=None):
                 if pdf_resp.status_code == 200 and (
                     pdf_resp.content.startswith(b"%PDF") or b"%PDF-" in pdf_resp.content[:1024]
                 ):
+                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
                     with open(file_path, "wb") as f:
                         f.write(pdf_resp.content)
                     download_success = True
