@@ -34,6 +34,8 @@ from extractors.email_verifier import (
     clean_author_name,
     is_valid_author_name,
     is_country_allowed,
+    detect_country,
+    normalize_country_name,
     normalize_and_realign_records,
     batch_verify_records,
     verify_single_record,
@@ -302,6 +304,7 @@ def save_new_emails_to_master(new_rows):
     """Append newly found email rows to the master CSV file after sanitizing them."""
     if not new_rows:
         return
+    target_cols = ["Paper Title", "Author Name", "Email ID", "Country", "DOI"]
     sanitized_rows = []
     for r in new_rows:
         row_copy = dict(r)
@@ -311,11 +314,21 @@ def save_new_emails_to_master(new_rows):
             row_copy["Author Name"] = clean_author_name(row_copy["Author Name"], email=str(row_copy.get("Email ID", "")))
         if "Email ID" in row_copy:
             row_copy["Email ID"] = str(row_copy["Email ID"]).strip().lower()
+        if "Country" in row_copy and row_copy["Country"] and str(row_copy["Country"]).strip():
+            row_copy["Country"] = normalize_country_name(row_copy["Country"])
+        else:
+            row_copy["Country"] = detect_country(
+                email=str(row_copy.get("Email ID", "")),
+                doi=str(row_copy.get("DOI", "")),
+                paper_title=str(row_copy.get("Paper Title", ""))
+            )
         if "DOI" in row_copy:
             row_copy["DOI"] = re.sub(r'[\r\n\t]+', '', str(row_copy["DOI"])).strip()
-        sanitized_rows.append(row_copy)
 
-    new_df = pd.DataFrame(sanitized_rows)
+        clean_dict = {col: row_copy.get(col, "") for col in target_cols}
+        sanitized_rows.append(clean_dict)
+
+    new_df = pd.DataFrame(sanitized_rows)[target_cols]
     # utf-8-sig = UTF-8 with BOM — Excel on Windows opens it without garbled characters.
     # mode='a' appends; header only when the file is new/empty.
     file_is_empty = (
@@ -633,7 +646,7 @@ SOURCE_FETCHERS = {
 def format_and_save_excel(data, excel_path, sheet_name="Authors"):
     """
     Saves and formats records or DataFrame into a pristine, professionally formatted Excel workbook:
-    - Enforces strict sequential 4-column order: Paper Title, Author Name, Email ID, DOI
+    - Enforces strict sequential 5-column order: Paper Title, Author Name, Email ID, Country, DOI
     - Thoroughly sanitizes all fields (eliminates newlines, HTML entities, and rogue spaces)
     - Professional executive styling:
       * Deep Navy header (#1F4E79) with bold white text
@@ -641,7 +654,7 @@ def format_and_save_excel(data, excel_path, sheet_name="Authors"):
       * Vertically centered alignment (20pt row height)
       * Custom fitted column widths
       * Freeze panes enabled on row 2 so headers remain visible when scrolling
-      * Excel auto-filters applied
+      * Excel auto-filters applied across all 5 columns
     """
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
@@ -651,7 +664,7 @@ def format_and_save_excel(data, excel_path, sheet_name="Authors"):
     else:
         df = pd.DataFrame(data)
 
-    target_cols = ["Paper Title", "Author Name", "Email ID", "DOI"]
+    target_cols = ["Paper Title", "Author Name", "Email ID", "Country", "DOI"]
     for col in target_cols:
         if col not in df.columns:
             df[col] = ""
@@ -664,6 +677,22 @@ def format_and_save_excel(data, excel_path, sheet_name="Authors"):
         cleaned_authors.append(clean_author_name(row["Author Name"], email=str(row["Email ID"])))
     df["Author Name"] = cleaned_authors
     df["Email ID"] = [str(e).strip().lower() for e in df["Email ID"]]
+
+    # Sanitize / detect country
+    cleaned_countries = []
+    for _, row in df.iterrows():
+        c_val = str(row["Country"]).strip() if pd.notna(row["Country"]) else ""
+        if c_val and c_val.lower() not in ("nan", "none", "null", "n/a", "na", "unknown"):
+            cleaned_countries.append(normalize_country_name(c_val))
+        else:
+            detected = detect_country(
+                email=str(row["Email ID"]),
+                doi=str(row["DOI"]),
+                paper_title=str(row["Paper Title"])
+            )
+            cleaned_countries.append(detected or "Unknown")
+    df["Country"] = cleaned_countries
+
     df["DOI"] = [
         re.sub(r'[\r\n\t]+', '', str(d)).strip() if pd.notna(d) and str(d) != "nan" else ""
         for d in df["DOI"]
@@ -684,9 +713,10 @@ def format_and_save_excel(data, excel_path, sheet_name="Authors"):
         border_side = Side(style="thin", color="E5E7EB")
         data_border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
 
+        num_cols = len(target_cols)
         # Style Header Row
         ws.row_dimensions[1].height = 26
-        for col_idx in range(1, 5):
+        for col_idx in range(1, num_cols + 1):
             cell = ws.cell(row=1, column=col_idx)
             cell.fill = header_fill
             cell.font = header_font
@@ -698,28 +728,30 @@ def format_and_save_excel(data, excel_path, sheet_name="Authors"):
         for r_idx in range(2, num_rows + 2):
             ws.row_dimensions[r_idx].height = 20
             row_fill = zebra_fill if (r_idx % 2 == 0) else white_fill
-            for c_idx in range(1, 5):
+            for c_idx in range(1, num_cols + 1):
                 cell = ws.cell(row=r_idx, column=c_idx)
                 cell.font = data_font
                 cell.fill = row_fill
                 cell.border = data_border
-                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=False)
+                horiz = "center" if c_idx == 4 else "left"
+                cell.alignment = Alignment(horizontal=horiz, vertical="center", wrap_text=False)
 
         # Set optimal column widths
         col_widths = {
             1: 65,  # Paper Title
             2: 28,  # Author Name
             3: 32,  # Email ID
-            4: 35,  # DOI
+            4: 24,  # Country
+            5: 38,  # DOI
         }
         for c_idx, width in col_widths.items():
             ws.column_dimensions[get_column_letter(c_idx)].width = width
 
         # Freeze panes at A2 so header stays sticky
         ws.freeze_panes = "A2"
-        # Enable Excel Auto-Filter
+        # Enable Excel Auto-Filter across all 5 columns
         if num_rows > 0:
-            ws.auto_filter.ref = f"A1:D{num_rows + 1}"
+            ws.auto_filter.ref = f"A1:{get_column_letter(num_cols)}{num_rows + 1}"
 
 
 # -----------------------------------------------------------
@@ -944,12 +976,20 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
                             log.info(f"[CountryFilter] Excluded email {clean_email}: {country_reason}")
                             continue
 
+                        detected_country = detect_country(
+                            email=clean_email,
+                            doi=item_doi_raw,
+                            affiliation=item.get("affiliation", ""),
+                            paper_title=item.get("title", ""),
+                            allowed_countries=selected_countries
+                        )
                         pending_rows.append({
                             "PDF File Name": item["pdf_name"],
                             "Source Journal": item.get("source_journal", source_label),
                             "Paper Title": clean_paper_title(item["title"]),
                             "Author Name": clean_auth,
                             "Email ID": clean_email,
+                            "Country": detected_country,
                             "DOI": re.sub(r'[\r\n\t]+', '', str(item_doi_raw)).strip(),
                         })
                         seen_emails.add(clean_email)
@@ -984,12 +1024,20 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
                         log.info(f"[CountryFilter] Excluded email {email}: {country_reason}")
                         continue
 
+                    detected_country = detect_country(
+                        email=email,
+                        doi=item_doi_raw,
+                        affiliation=item.get("affiliation", ""),
+                        paper_title=item.get("title", ""),
+                        allowed_countries=selected_countries
+                    )
                     pending_rows.append({
                         "PDF File Name": item["pdf_name"],
                         "Source Journal": item.get("source_journal", source_label),
                         "Paper Title": clean_paper_title(item["title"]),
                         "Author Name": clean_auth,
                         "Email ID": email,
+                        "Country": detected_country,
                         "DOI": re.sub(r'[\r\n\t]+', '', str(item_doi_raw)).strip(),
                     })
                     seen_emails.add(email)
@@ -1466,9 +1514,9 @@ def _run_filter_task(task_id, file_path, original_filename, api_key=None, allowe
             progress_callback=_progress
         )
 
-        # Build clean Excel file with strictly the 4 requested columns
+        # Build clean Excel file with strictly the 5 requested columns
         clean_df = pd.DataFrame(valid_records)
-        target_cols = ["Paper Title", "Author Name", "Email ID", "DOI"]
+        target_cols = ["Paper Title", "Author Name", "Email ID", "Country", "DOI"]
         for col in target_cols:
             if col not in clean_df.columns:
                 clean_df[col] = ""

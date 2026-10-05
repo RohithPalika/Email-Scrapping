@@ -422,6 +422,7 @@ def verify_email_via_api(email, api_key, service="auto"):
 # Strict Country Domain & Geolocation Rules
 # -----------------------------------------------------------
 COUNTRY_DOMAIN_RULES = {
+    # North America
     "USA": {
         "iso": {"US"},
         "domain_suffixes": (".edu", ".gov", ".mil", ".us"),
@@ -430,15 +431,127 @@ COUNTRY_DOMAIN_RULES = {
             "yale.edu", "columbia.edu", "cornell.edu", "berkeley.edu", "ucla.edu",
             "ucsf.edu", "ucsd.edu", "umich.edu", "upenn.edu", "uw.edu",
             "washington.edu", "northwestern.edu", "duke.edu", "nih.gov", "cdc.gov",
-            "hopkinsmedicine.org", "mskcc.org", "stjude.org", "clevelandclinic.org"
+            "hopkinsmedicine.org", "mskcc.org", "stjude.org", "clevelandclinic.org",
+            "uvahealth.org", "virginia.edu"
         ],
-        "keywords": ["united states", "usa", "u.s.a.", " u.s. ", "america", "california", "new york", "texas", "massachusetts"]
+        "keywords": ["united states", "usa", "u.s.a.", " u.s. ", "america", "california", "new york", "texas", "massachusetts", "harvard", "stanford", "yale", "columbia", "hopkins"]
     },
+    "United States": {
+        "iso": {"US"},
+        "domain_suffixes": (".edu", ".gov", ".mil", ".us"),
+        "institutions": [
+            "mayo.edu", "stanford.edu", "harvard.edu", "mit.edu", "jhu.edu",
+            "yale.edu", "columbia.edu", "cornell.edu", "berkeley.edu", "ucla.edu",
+            "ucsf.edu", "ucsd.edu", "umich.edu", "upenn.edu", "uw.edu",
+            "washington.edu", "northwestern.edu", "duke.edu", "nih.gov", "cdc.gov",
+            "hopkinsmedicine.org", "mskcc.org", "stjude.org", "clevelandclinic.org",
+            "uvahealth.org", "virginia.edu"
+        ],
+        "keywords": ["united states", "usa", "u.s.a.", " u.s. ", "america", "california", "new york", "texas", "massachusetts", "harvard", "stanford", "yale", "columbia", "hopkins"]
+    },
+    "Canada": {
+        "iso": {"CA"},
+        "domain_suffixes": (".ca", ".gc.ca", ".qc.ca"),
+        "institutions": ["utoronto.ca", "mcgill.ca", "ubc.ca", "umontreal.ca", "ualberta.ca", "uwaterloo.ca", "ucalgary.ca"],
+        "keywords": ["canada", "canadian", "toronto", "montreal", "vancouver", "ottawa", "quebec", "alberta", "ontario"]
+    },
+    "Mexico": {
+        "iso": {"MX"},
+        "domain_suffixes": (".mx", ".edu.mx"),
+        "institutions": ["unam.mx", "cinvestav.mx", "ipn.mx", "itesm.mx", "uam.mx"],
+        "keywords": ["mexico", "méxico", "mexican"]
+    },
+
+    # Europe
     "UK": {
         "iso": {"GB", "UK"},
         "domain_suffixes": (".ac.uk", ".gov.uk", ".uk", ".nhs.uk", ".nhs.net", ".org.uk", ".co.uk"),
         "institutions": ["ox.ac.uk", "cam.ac.uk", "ucl.ac.uk", "imperial.ac.uk", "kcl.ac.uk", "ed.ac.uk", "manchester.ac.uk", "warwick.ac.uk"],
         "keywords": ["united kingdom", " uk ", "u.k.", "england", "scotland", "wales", "great britain", "london", "oxford", "cambridge"]
+    },
+    "United Kingdom": {
+        "iso": {"GB", "UK"},
+        "domain_suffixes": (".ac.uk", ".gov.uk", ".uk", ".nhs.uk", ".nhs.net", ".org.uk", ".co.uk"),
+        "institutions": ["ox.ac.uk", "cam.ac.uk", "ucl.ac.uk", "imperial.ac.uk", "kcl.ac.uk", "ed.ac.uk", "manchester.ac.uk", "warwick.ac.uk"],
+        "keywords": ["united kingdom", " uk ", "u.k.", "england", "scotland", "wales", "great britain", "london", "oxford", "cambridge"]
+    },
+    "Germany": {
+        "iso": {"DE"},
+        "domain_suffixes": (".de",),
+        "institutions": ["mpg.de", "helmholtz.de", "fraunhofer.de", "charite.de", "tum.de", "lmu.de", "uni-heidelberg.de", "rwth-aachen.de", "kit.edu"],
+        "keywords": ["germany", "deutschland", "german", "berlin", "munich", "heidelberg", "frankfurt", "hamburg", "tubingen", "bonn"]
+    },
+    "France": {
+        "iso": {"FR"},
+        "domain_suffixes": (".fr",),
+        "institutions": ["inserm.fr", "cnrs.fr", "pasteur.fr", "sorbonne-universite.fr", "u-paris.fr", "univ-lyon1.fr"],
+        "keywords": ["france", "french", "paris", "lyon", "marseille", "toulouse", "bordeaux", "strasbourg"]
+    },
+    "Netherlands": {
+        "iso": {"NL"},
+        "domain_suffixes": (".nl",),
+        "institutions": ["tudelft.nl", "uva.nl", "uu.nl", "erasmusmc.nl", "leidenuniv.nl", "rug.nl", "radboudumc.nl", "tue.nl"],
+        "keywords": ["netherlands", "dutch", "amsterdam", "rotterdam", "utrecht", "leiden", "delft", "groningen", "eindhoven"]
+    },
+    "Belgium": {
+        "iso": {"BE"},
+        "domain_suffixes": (".be",),
+        "institutions": ["kuleuven.be", "ugent.be", "uclouvain.be", "ulb.be", "uantwerpen.be", "uliege.be", "vub.be"],
+        "keywords": ["belgium", "belgian", "brussels", "leuven", "ghent", "antwerp", "liege"]
+    },
+    "Switzerland": {
+        "iso": {"CH"},
+        "domain_suffixes": (".ch",),
+        "institutions": ["ethz.ch", "epfl.ch", "unizh.ch", "uzh.ch", "unige.ch", "unibas.ch", "unibe.ch", "unil.ch", "psi.ch", "cern.ch"],
+        "keywords": ["switzerland", "swiss", "zurich", "geneva", "basel", "lausanne", "bern"]
+    },
+    "Sweden": {
+        "iso": {"SE"},
+        "domain_suffixes": (".se",),
+        "institutions": ["ki.se", "kth.se", "lu.se", "uu.se", "su.se", "gu.se", "chalmers.se", "liu.se"],
+        "keywords": ["sweden", "swedish", "stockholm", "karolinska", "uppsala", "lund", "gothenburg"]
+    },
+    "Norway": {
+        "iso": {"NO"},
+        "domain_suffixes": (".no",),
+        "institutions": ["uio.no", "ntnu.no", "uib.no", "uit.no", "ous-hf.no", "sintef.no"],
+        "keywords": ["norway", "norwegian", "oslo", "bergen", "trondheim", "tromso"]
+    },
+    "Denmark": {
+        "iso": {"DK"},
+        "domain_suffixes": (".dk",),
+        "institutions": ["ku.dk", "dtu.dk", "au.dk", "sdu.dk", "aau.dk", "rh.dk"],
+        "keywords": ["denmark", "danish", "copenhagen", "aarhus", "odense", "aalborg"]
+    },
+    "Finland": {
+        "iso": {"FI"},
+        "domain_suffixes": (".fi",),
+        "institutions": ["helsinki.fi", "aalto.fi", "utu.fi", "tuni.fi", "oulu.fi", "uef.fi", "hus.fi"],
+        "keywords": ["finland", "finnish", "helsinki", "espoo", "tampere", "turku", "oulu"]
+    },
+    "Ireland": {
+        "iso": {"IE"},
+        "domain_suffixes": (".ie",),
+        "institutions": ["tcd.ie", "ucd.ie", "ucc.ie", "nuigalway.ie", "universityofgalway.ie", "dcu.ie", "ul.ie", "rcsi.com"],
+        "keywords": ["ireland", "irish", "dublin", "cork", "galway", "limerick"]
+    },
+    "Austria": {
+        "iso": {"AT"},
+        "domain_suffixes": (".at", ".ac.at"),
+        "institutions": ["univie.ac.at", "meduniwien.ac.at", "tuwien.ac.at", "uibk.ac.at", "tugraz.at", "jku.at"],
+        "keywords": ["austria", "austrian", "vienna", "innsbruck", "graz", "salzburg", "linz"]
+    },
+    "Luxembourg": {
+        "iso": {"LU"},
+        "domain_suffixes": (".lu",),
+        "institutions": ["uni.lu", "lih.lu", "list.lu"],
+        "keywords": ["luxembourg", "esch-sur-alzette"]
+    },
+    "Iceland": {
+        "iso": {"IS"},
+        "domain_suffixes": (".is",),
+        "institutions": ["hi.is", "ru.is", "landspitali.is"],
+        "keywords": ["iceland", "icelandic", "reykjavik"]
     },
     "Italy": {
         "iso": {"IT"},
@@ -452,53 +565,107 @@ COUNTRY_DOMAIN_RULES = {
         "institutions": ["uab.es", "ub.edu", "ucm.es", "uam.es", "csic.es", "upv.es", "unav.edu"],
         "keywords": ["spain", "españa", "spanish", "madrid", "barcelona", "valencia", "seville"]
     },
+    "Portugal": {
+        "iso": {"PT"},
+        "domain_suffixes": (".pt", ".edu.pt"),
+        "institutions": ["ulisboa.pt", "up.pt", "uc.pt", "unl.pt", "ua.pt", "uminho.pt", "fchampalimaud.org"],
+        "keywords": ["portugal", "portuguese", "lisbon", "porto", "coimbra", "braga"]
+    },
     "Romania": {
         "iso": {"RO"},
         "domain_suffixes": (".ro", ".edu.ro"),
         "institutions": ["unibuc.ro", "ubbcluj.ro", "upb.ro", "umfcluj.ro", "umfcd.ro", "upt.ro"],
         "keywords": ["romania", "romanian", "bucharest", "cluj", "iasi", "timisoara"]
     },
-    "France": {
-        "iso": {"FR"},
-        "domain_suffixes": (".fr",),
-        "institutions": ["inserm.fr", "cnrs.fr", "pasteur.fr", "sorbonne-universite.fr", "u-paris.fr", "univ-lyon1.fr"],
-        "keywords": ["france", "french", "paris", "lyon", "marseille", "toulouse", "bordeaux"]
+
+    # Asia
+    "Japan": {
+        "iso": {"JP"},
+        "domain_suffixes": (".jp", ".ac.jp"),
+        "institutions": ["u-tokyo.ac.jp", "kyoto-u.ac.jp", "osaka-u.ac.jp", "tohoku.ac.jp", "titech.ac.jp", "nagoya-u.ac.jp", "kyushu-u.ac.jp", "riken.jp"],
+        "keywords": ["japan", "japanese", "tokyo", "kyoto", "osaka", "tohoku", "nagoya", "fukuoka", "hokkaido", "tsukuba"]
     },
+    "South Korea": {
+        "iso": {"KR"},
+        "domain_suffixes": (".kr", ".ac.kr"),
+        "institutions": ["snu.ac.kr", "kaist.ac.kr", "yonsei.ac.kr", "korea.ac.kr", "postech.ac.kr", "skku.edu"],
+        "keywords": ["korea", "south korea", "korean", "seoul", "daejeon", "busan", "incheon", "kaist"]
+    },
+    "Singapore": {
+        "iso": {"SG"},
+        "domain_suffixes": (".sg", ".edu.sg"),
+        "institutions": ["nus.edu.sg", "ntu.edu.sg", "smu.edu.sg", "sutd.edu.sg", "a-star.edu.sg", "singhealth.com.sg"],
+        "keywords": ["singapore", "singaporean"]
+    },
+    "Israel": {
+        "iso": {"IL"},
+        "domain_suffixes": (".il", ".ac.il"),
+        "institutions": ["tau.ac.il", "huji.ac.il", "weizmann.ac.il", "technion.ac.il", "bgu.ac.il", "biu.ac.il"],
+        "keywords": ["israel", "israeli", "tel aviv", "jerusalem", "haifa", "rehovot"]
+    },
+    "United Arab Emirates": {
+        "iso": {"AE"},
+        "domain_suffixes": (".ae", ".ac.ae"),
+        "institutions": ["uaeu.ac.ae", "ku.ac.ae", "aus.edu", "nyuad.nyu.edu", "sharjah.ac.ae"],
+        "keywords": ["united arab emirates", "uae", "u.a.e.", "dubai", "abu dhabi", "sharjah"]
+    },
+    "UAE": {
+        "iso": {"AE"},
+        "domain_suffixes": (".ae", ".ac.ae"),
+        "institutions": ["uaeu.ac.ae", "ku.ac.ae", "aus.edu", "nyuad.nyu.edu", "sharjah.ac.ae"],
+        "keywords": ["united arab emirates", "uae", "u.a.e.", "dubai", "abu dhabi", "sharjah"]
+    },
+    "Qatar": {
+        "iso": {"QA"},
+        "domain_suffixes": (".qa", ".edu.qa"),
+        "institutions": ["qu.edu.qa", "hbku.edu.qa", "qatar.cmu.edu", "qatar.tamu.edu", "weill.cornell.edu"],
+        "keywords": ["qatar", "qatari", "doha"]
+    },
+    "Saudi Arabia": {
+        "iso": {"SA"},
+        "domain_suffixes": (".sa", ".edu.sa"),
+        "institutions": ["kaust.edu.sa", "kfupm.edu.sa", "ksu.edu.sa", "kau.edu.sa", "alfaisal.edu"],
+        "keywords": ["saudi arabia", "saudi", "ksa", "riyadh", "jeddah", "dhahran"]
+    },
+    "Kuwait": {
+        "iso": {"KW"},
+        "domain_suffixes": (".kw", ".edu.kw"),
+        "institutions": ["ku.edu.kw", "gust.edu.kw", "aum.edu.kw", "dasmaninstitute.org"],
+        "keywords": ["kuwait", "kuwaiti"]
+    },
+    "Bahrain": {
+        "iso": {"BH"},
+        "domain_suffixes": (".bh", ".edu.bh"),
+        "institutions": ["uob.edu.bh", "rcsi-mub.com", "agu.edu.bh"],
+        "keywords": ["bahrain", "bahraini", "manama"]
+    },
+    "Oman": {
+        "iso": {"OM"},
+        "domain_suffixes": (".om", ".edu.om"),
+        "institutions": ["squ.edu.om", "unizwa.edu.om", "guutech.edu.om"],
+        "keywords": ["oman", "omani", "muscat"]
+    },
+
+    # Oceania
+    "Australia": {
+        "iso": {"AU"},
+        "domain_suffixes": (".au", ".edu.au", ".gov.au"),
+        "institutions": ["unimelb.edu.au", "sydney.edu.au", "anu.edu.au", "uq.edu.au", "unsw.edu.au", "monash.edu", "uwa.edu.au", "uts.edu.au", "csiro.au"],
+        "keywords": ["australia", "australian", "melbourne", "sydney", "brisbane", "canberra", "perth", "adelaide"]
+    },
+    "New Zealand": {
+        "iso": {"NZ"},
+        "domain_suffixes": (".nz", ".ac.nz"),
+        "institutions": ["auckland.ac.nz", "otago.ac.nz", "canterbury.ac.nz", "vuw.ac.nz", "waikato.ac.nz", "massey.ac.nz"],
+        "keywords": ["new zealand", "nz", "auckland", "wellington", "christchurch", "dunedin"]
+    },
+
+    # Other Regions
     "Brazil": {
         "iso": {"BR"},
         "domain_suffixes": (".br", ".edu.br", ".gov.br"),
         "institutions": ["usp.br", "unicamp.br", "ufrj.br", "unesp.br", "ufmg.br", "ufrgs.br", "fiocruz.br"],
         "keywords": ["brazil", "brasil", "brazilian", "são paulo", "rio de janeiro"]
-    },
-    "Germany": {
-        "iso": {"DE"},
-        "domain_suffixes": (".de",),
-        "institutions": ["mpg.de", "helmholtz.de", "fraunhofer.de", "charite.de", "tum.de", "lmu.de", "uni-heidelberg.de", "rwth-aachen.de", "kit.edu"],
-        "keywords": ["germany", "deutschland", "german", "berlin", "munich", "heidelberg", "frankfurt", "hamburg"]
-    },
-    "Australia": {
-        "iso": {"AU"},
-        "domain_suffixes": (".au", ".edu.au", ".gov.au"),
-        "institutions": ["unimelb.edu.au", "sydney.edu.au", "anu.edu.au", "uq.edu.au", "unsw.edu.au", "monash.edu", "uwa.edu.au", "uts.edu.au", "csiro.au"],
-        "keywords": ["australia", "australian", "melbourne", "sydney", "brisbane", "canberra", "perth"]
-    },
-    "Canada": {
-        "iso": {"CA"},
-        "domain_suffixes": (".ca", ".gc.ca"),
-        "institutions": ["utoronto.ca", "mcgill.ca", "ubc.ca", "umontreal.ca", "ualberta.ca", "uwaterloo.ca", "ucalgary.ca"],
-        "keywords": ["canada", "canadian", "toronto", "montreal", "vancouver", "ottawa", "quebec"]
-    },
-    "Mexico": {
-        "iso": {"MX"},
-        "domain_suffixes": (".mx", ".edu.mx"),
-        "institutions": ["unam.mx", "cinvestav.mx", "ipn.mx", "itesm.mx", "uam.mx"],
-        "keywords": ["mexico", "méxico", "mexican"]
-    },
-    "Saudi Arabia": {
-        "iso": {"SA"},
-        "domain_suffixes": (".sa", ".edu.sa"),
-        "institutions": ["kaust.edu.sa", "kfupm.edu.sa", "ksu.edu.sa", "kau.edu.sa"],
-        "keywords": ["saudi arabia", "saudi", "ksa", "riyadh", "jeddah"]
     },
     "Egypt": {
         "iso": {"EG"},
@@ -559,16 +726,248 @@ LOW_INCOME_WEBMAILS = frozenset({
 DOI_COUNTRY_CACHE = {}
 DOI_CACHE_LOCK = threading.Lock()
 
+# -----------------------------------------------------------
+# Comprehensive Full Country Names Mapping
+# -----------------------------------------------------------
+ISO_TO_COUNTRY_NAME = {
+    "US": "United States", "USA": "United States",
+    "GB": "United Kingdom", "UK": "United Kingdom",
+    "DE": "Germany", "FR": "France", "IT": "Italy",
+    "CA": "Canada", "AU": "Australia", "ES": "Spain",
+    "NL": "Netherlands", "CH": "Switzerland", "SE": "Sweden",
+    "NO": "Norway", "DK": "Denmark", "FI": "Finland",
+    "AT": "Austria", "BE": "Belgium", "IE": "Ireland",
+    "NZ": "New Zealand", "JP": "Japan", "KR": "South Korea",
+    "SG": "Singapore", "IN": "India", "BR": "Brazil",
+    "MX": "Mexico", "AR": "Argentina", "CL": "Chile",
+    "CO": "Colombia", "ZA": "South Africa", "IL": "Israel",
+    "TR": "Turkey", "GR": "Greece", "CZ": "Czech Republic",
+    "PL": "Poland", "PT": "Portugal", "HU": "Hungary",
+    "RO": "Romania", "SA": "Saudi Arabia", "AE": "United Arab Emirates",
+    "QA": "Qatar", "KW": "Kuwait", "BH": "Bahrain", "OM": "Oman",
+    "LU": "Luxembourg", "IS": "Iceland",
+    "EG": "Egypt", "CN": "China", "TW": "Taiwan",
+    "HK": "Hong Kong", "PK": "Pakistan", "BD": "Bangladesh",
+    "RU": "Russia", "IR": "Iran", "MY": "Malaysia",
+    "TH": "Thailand", "ID": "Indonesia", "PH": "Philippines",
+    "VN": "Vietnam", "NG": "Nigeria", "KE": "Kenya",
+    "GH": "Ghana", "ET": "Ethiopia", "UA": "Ukraine"
+}
+
+# Compound & single domain TLD suffixes mapped to full country names
+# (Ordered: compound TLDs before single ccTLDs to match longest first)
+TLD_TO_COUNTRY_NAME = [
+    # United Kingdom
+    (".ac.uk", "United Kingdom"), (".gov.uk", "United Kingdom"),
+    (".co.uk", "United Kingdom"), (".nhs.uk", "United Kingdom"),
+    (".nhs.net", "United Kingdom"), (".org.uk", "United Kingdom"),
+    (".uk", "United Kingdom"),
+    # Australia
+    (".edu.au", "Australia"), (".gov.au", "Australia"),
+    (".com.au", "Australia"), (".org.au", "Australia"), (".au", "Australia"),
+    # Canada
+    (".gc.ca", "Canada"), (".ca", "Canada"),
+    # United States
+    (".edu", "United States"), (".gov", "United States"),
+    (".mil", "United States"), (".us", "United States"),
+    # Germany
+    (".de", "Germany"),
+    # France
+    (".fr", "France"),
+    # Italy
+    (".edu.it", "Italy"), (".it", "Italy"),
+    # Spain
+    (".edu.es", "Spain"), (".es", "Spain"),
+    # Netherlands, Switzerland, Nordic
+    (".nl", "Netherlands"), (".ch", "Switzerland"),
+    (".se", "Sweden"), (".no", "Norway"),
+    (".dk", "Denmark"), (".fi", "Finland"),
+    # Austria, Belgium, Poland, Portugal, Ireland
+    (".ac.at", "Austria"), (".at", "Austria"), (".be", "Belgium"),
+    (".edu.pl", "Poland"), (".pl", "Poland"),
+    (".edu.pt", "Portugal"), (".pt", "Portugal"), (".ie", "Ireland"),
+    # New Zealand, Japan, Korea, Singapore
+    (".ac.nz", "New Zealand"), (".nz", "New Zealand"),
+    (".ac.jp", "Japan"), (".jp", "Japan"),
+    (".ac.kr", "South Korea"), (".kr", "South Korea"),
+    (".edu.sg", "Singapore"), (".sg", "Singapore"),
+    # India, Brazil, Mexico, Latin America
+    (".ac.in", "India"), (".res.in", "India"), (".edu.in", "India"),
+    (".gov.in", "India"), (".in", "India"),
+    (".edu.br", "Brazil"), (".gov.br", "Brazil"), (".br", "Brazil"),
+    (".edu.mx", "Mexico"), (".mx", "Mexico"),
+    (".edu.ar", "Argentina"), (".ar", "Argentina"),
+    (".edu.cl", "Chile"), (".cl", "Chile"),
+    (".edu.co", "Colombia"), (".co", "Colombia"),
+    (".edu.ec", "Ecuador"), (".ec", "Ecuador"),
+    (".edu.pe", "Peru"), (".pe", "Peru"),
+    (".edu.uy", "Uruguay"), (".uy", "Uruguay"),
+    (".edu.ve", "Venezuela"), (".ve", "Venezuela"),
+    # Middle East & Africa
+    (".ac.za", "South Africa"), (".za", "South Africa"),
+    (".ac.il", "Israel"), (".il", "Israel"),
+    (".edu.tr", "Turkey"), (".tr", "Turkey"),
+    (".edu.gr", "Greece"), (".gr", "Greece"),
+    (".cz", "Czech Republic"), (".hu", "Hungary"),
+    (".edu.ro", "Romania"), (".ro", "Romania"),
+    (".edu.sa", "Saudi Arabia"), (".sa", "Saudi Arabia"),
+    (".ac.ae", "United Arab Emirates"), (".ae", "United Arab Emirates"),
+    (".edu.qa", "Qatar"), (".qa", "Qatar"),
+    (".edu.kw", "Kuwait"), (".kw", "Kuwait"),
+    (".edu.bh", "Bahrain"), (".bh", "Bahrain"),
+    (".edu.om", "Oman"), (".om", "Oman"),
+    (".edu.eg", "Egypt"), (".eg", "Egypt"),
+    (".lu", "Luxembourg"), (".is", "Iceland"),
+    # Asia & other
+    (".edu.cn", "China"), (".ac.cn", "China"), (".cn", "China"),
+    (".edu.tw", "Taiwan"), (".tw", "Taiwan"),
+    (".edu.hk", "Hong Kong"), (".hk", "Hong Kong"),
+    (".edu.pk", "Pakistan"), (".pk", "Pakistan"),
+    (".edu.bd", "Bangladesh"), (".bd", "Bangladesh"),
+    (".edu.ru", "Russia"), (".ru", "Russia"),
+    (".ac.ir", "Iran"), (".ir", "Iran"),
+    (".edu.my", "Malaysia"), (".my", "Malaysia"),
+    (".ac.th", "Thailand"), (".th", "Thailand"),
+    (".ac.id", "Indonesia"), (".id", "Indonesia"),
+    (".edu.ph", "Philippines"), (".ph", "Philippines"),
+    (".edu.vn", "Vietnam"), (".vn", "Vietnam"),
+    (".edu.ng", "Nigeria"), (".ng", "Nigeria"),
+    (".ac.ke", "Kenya"), (".ke", "Kenya"),
+]
+
+# Top institutional domains mapped to full country names
+INSTITUTION_TO_COUNTRY = {
+    # USA
+    "mayo.edu": "United States", "stanford.edu": "United States", "harvard.edu": "United States",
+    "mit.edu": "United States", "jhu.edu": "United States", "yale.edu": "United States",
+    "columbia.edu": "United States", "cornell.edu": "United States", "berkeley.edu": "United States",
+    "ucla.edu": "United States", "ucsf.edu": "United States", "ucsd.edu": "United States",
+    "umich.edu": "United States", "upenn.edu": "United States", "uw.edu": "United States",
+    "washington.edu": "United States", "northwestern.edu": "United States", "duke.edu": "United States",
+    "nih.gov": "United States", "cdc.gov": "United States", "hopkinsmedicine.org": "United States",
+    "mskcc.org": "United States", "stjude.org": "United States", "clevelandclinic.org": "United States",
+    "uvahealth.org": "United States", "virginia.edu": "United States",
+    # UK
+    "ox.ac.uk": "United Kingdom", "cam.ac.uk": "United Kingdom", "ucl.ac.uk": "United Kingdom",
+    "imperial.ac.uk": "United Kingdom", "kcl.ac.uk": "United Kingdom", "ed.ac.uk": "United Kingdom",
+    "manchester.ac.uk": "United Kingdom", "warwick.ac.uk": "United Kingdom",
+    # Germany
+    "mpg.de": "Germany", "helmholtz.de": "Germany", "fraunhofer.de": "Germany",
+    "charite.de": "Germany", "tum.de": "Germany", "lmu.de": "Germany",
+    "uni-heidelberg.de": "Germany", "rwth-aachen.de": "Germany", "kit.edu": "Germany",
+    # France
+    "inserm.fr": "France", "cnrs.fr": "France", "pasteur.fr": "France",
+    "sorbonne-universite.fr": "France", "u-paris.fr": "France", "univ-lyon1.fr": "France",
+    # Italy
+    "unibo.it": "Italy", "unimi.it": "Italy", "uniroma1.it": "Italy",
+    "unipd.it": "Italy", "polimi.it": "Italy", "cnr.it": "Italy",
+    "unige.it": "Italy", "unifi.it": "Italy", "unina.it": "Italy",
+    # Spain
+    "uab.es": "Spain", "ub.edu": "Spain", "ucm.es": "Spain",
+    "uam.es": "Spain", "csic.es": "Spain", "upv.es": "Spain", "unav.edu": "Spain",
+    # Romania
+    "unibuc.ro": "Romania", "ubbcluj.ro": "Romania", "upb.ro": "Romania",
+    "umfcluj.ro": "Romania", "umfcd.ro": "Romania", "upt.ro": "Romania",
+    # Brazil
+    "usp.br": "Brazil", "unicamp.br": "Brazil", "ufrj.br": "Brazil",
+    "unesp.br": "Brazil", "ufmg.br": "Brazil", "ufrgs.br": "Brazil", "fiocruz.br": "Brazil",
+    # Australia
+    "unimelb.edu.au": "Australia", "sydney.edu.au": "Australia", "anu.edu.au": "Australia",
+    "uq.edu.au": "Australia", "unsw.edu.au": "Australia", "monash.edu": "Australia",
+    "uwa.edu.au": "Australia", "uts.edu.au": "Australia", "csiro.au": "Australia",
+    # Canada
+    "utoronto.ca": "Canada", "mcgill.ca": "Canada", "ubc.ca": "Canada",
+    "umontreal.ca": "Canada", "ualberta.ca": "Canada", "uwaterloo.ca": "Canada", "ucalgary.ca": "Canada",
+    # Mexico
+    "unam.mx": "Mexico", "cinvestav.mx": "Mexico", "ipn.mx": "Mexico", "itesm.mx": "Mexico", "uam.mx": "Mexico",
+    # Saudi Arabia
+    "kaust.edu.sa": "Saudi Arabia", "kfupm.edu.sa": "Saudi Arabia", "ksu.edu.sa": "Saudi Arabia", "kau.edu.sa": "Saudi Arabia",
+    # Egypt
+    "cu.edu.eg": "Egypt", "asu.edu.eg": "Egypt", "auc-egypt.edu": "Egypt", "mans.edu.eg": "Egypt", "alexu.edu.eg": "Egypt",
+}
+
+# Country name normalization (e.g. 'USA' -> 'United States', 'UK' -> 'United Kingdom')
+COUNTRY_NAME_NORMALIZER = {
+    "usa": "United States", "united states": "United States", "united states of america": "United States", "u.s.a.": "United States", "u.s.": "United States", "us": "United States",
+    "uk": "United Kingdom", "united kingdom": "United Kingdom", "u.k.": "United Kingdom", "england": "United Kingdom", "scotland": "United Kingdom", "wales": "United Kingdom", "great britain": "United Kingdom",
+    "de": "Germany", "deutschland": "Germany", "germany": "Germany",
+    "fr": "France", "france": "France",
+    "it": "Italy", "italia": "Italy", "italy": "Italy",
+    "es": "Spain", "españa": "Spain", "spain": "Spain",
+    "ca": "Canada", "canada": "Canada",
+    "au": "Australia", "australia": "Australia",
+    "nl": "Netherlands", "the netherlands": "Netherlands", "holland": "Netherlands",
+    "ch": "Switzerland", "switzerland": "Switzerland", "schweiz": "Switzerland",
+    "se": "Sweden", "sweden": "Sweden",
+    "no": "Norway", "norway": "Norway",
+    "dk": "Denmark", "denmark": "Denmark",
+    "fi": "Finland", "finland": "Finland",
+    "at": "Austria", "austria": "Austria",
+    "be": "Belgium", "belgium": "Belgium",
+    "ie": "Ireland", "ireland": "Ireland",
+    "nz": "New Zealand", "new zealand": "New Zealand",
+    "jp": "Japan", "japan": "Japan",
+    "kr": "South Korea", "south korea": "South Korea", "korea": "South Korea",
+    "sg": "Singapore", "singapore": "Singapore",
+    "in": "India", "india": "India",
+    "br": "Brazil", "brasil": "Brazil", "brazil": "Brazil",
+    "mx": "Mexico", "méxico": "Mexico", "mexico": "Mexico",
+    "ro": "Romania", "romania": "Romania",
+    "sa": "Saudi Arabia", "ksa": "Saudi Arabia", "saudi arabia": "Saudi Arabia",
+    "eg": "Egypt", "egypt": "Egypt",
+    "ae": "United Arab Emirates", "uae": "United Arab Emirates", "united arab emirates": "United Arab Emirates",
+    "qa": "Qatar", "qatar": "Qatar",
+    "kw": "Kuwait", "kuwait": "Kuwait",
+    "bh": "Bahrain", "bahrain": "Bahrain",
+    "om": "Oman", "oman": "Oman",
+    "lu": "Luxembourg", "luxembourg": "Luxembourg",
+    "is": "Iceland", "iceland": "Iceland",
+    "pt": "Portugal", "portugal": "Portugal",
+    "il": "Israel", "israel": "Israel",
+    "cn": "China", "china": "China",
+}
+
+
+def normalize_country_name(name):
+    """Normalizes any country name or code to its canonical Full Country Name."""
+    if not name:
+        return "Unknown"
+    s = str(name).strip()
+    lower_s = s.lower()
+    if lower_s in COUNTRY_NAME_NORMALIZER:
+        return COUNTRY_NAME_NORMALIZER[lower_s]
+    upper_s = s.upper()
+    if upper_s in ISO_TO_COUNTRY_NAME:
+        return ISO_TO_COUNTRY_NAME[upper_s]
+    # Clean capitalisation if unknown string
+    return s.title() if len(s) > 3 else upper_s
+
+
 def get_doi_countries(doi):
     """
-    Fetches institution countries associated with a DOI using OpenAlex with caching.
+    Fetches institution countries associated with a DOI or arXiv link using OpenAlex with caching.
     """
     if not doi:
         return set()
-    norm_doi = doi.strip().lower()
+    norm_doi = str(doi).strip()
+    for prefix in ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/"):
+        if norm_doi.lower().startswith(prefix):
+            norm_doi = norm_doi[len(prefix):]
+            break
+
+    # arXiv links to OpenAlex DOI
+    if "arxiv.org/abs/" in norm_doi.lower():
+        m = re.search(r"arxiv\.org/abs/([0-9]+\.[0-9]+)", norm_doi, re.I)
+        if m:
+            norm_doi = f"10.48550/arXiv.{m.group(1)}"
+    elif norm_doi.lower().startswith("arxiv:"):
+        aid = re.sub(r'v\d+$', '', norm_doi[6:].strip())
+        norm_doi = f"10.48550/arXiv.{aid}"
+
+    norm_key = norm_doi.lower()
     with DOI_CACHE_LOCK:
-        if norm_doi in DOI_COUNTRY_CACHE:
-            return DOI_COUNTRY_CACHE[norm_doi]
+        if norm_key in DOI_COUNTRY_CACHE:
+            return DOI_COUNTRY_CACHE[norm_key]
 
     countries = set()
     try:
@@ -583,8 +982,61 @@ def get_doi_countries(doi):
         pass
 
     with DOI_CACHE_LOCK:
-        DOI_COUNTRY_CACHE[norm_doi] = countries
+        DOI_COUNTRY_CACHE[norm_key] = countries
     return countries
+
+
+def detect_country(email, doi="", affiliation="", paper_title="", allowed_countries=None, allow_network=True):
+    """
+    Detects the full country name for an academic author using multi-layered heuristic intelligence:
+    1. Direct Email ccTLD match (e.g. .edu -> United States, .ac.uk -> United Kingdom, .de -> Germany, .it -> Italy)
+    2. Known institutional domain match (e.g. hopkinsmedicine.org, mpg.de, inserm.fr)
+    3. Affiliation text matching (keywords for countries and universities)
+    4. DOI OpenAlex lookup with in-memory caching (optional via allow_network)
+    5. Contextual fallback if allowed_countries was strictly filtered in UI
+    Returns: Canonical Full Country Name (e.g. 'United States', 'United Kingdom', 'Germany') or 'Unknown'
+    """
+    if not email:
+        email = ""
+    domain = email.split("@")[-1].lower().strip() if "@" in email else ""
+
+    # 1. Institution direct domain lookup
+    if domain:
+        if domain in INSTITUTION_TO_COUNTRY:
+            return INSTITUTION_TO_COUNTRY[domain]
+        for inst, country in INSTITUTION_TO_COUNTRY.items():
+            if domain.endswith("." + inst) or domain == inst:
+                return country
+
+    # 2. Email ccTLD detection (matches compound ccTLD first e.g. .ac.uk, then .uk)
+    if domain:
+        for tld, country in TLD_TO_COUNTRY_NAME:
+            if domain.endswith(tld):
+                return country
+
+    # 3. Affiliation text matching
+    aff_text = (affiliation or "").lower()
+    if aff_text:
+        for country_key, rule in COUNTRY_DOMAIN_RULES.items():
+            for kw in rule.get("keywords", []):
+                if kw in aff_text:
+                    return normalize_country_name(country_key)
+
+    # 4. DOI lookup via OpenAlex
+    if doi and allow_network:
+        iso_codes = get_doi_countries(doi)
+        if iso_codes:
+            for code in iso_codes:
+                if code in ISO_TO_COUNTRY_NAME:
+                    return ISO_TO_COUNTRY_NAME[code]
+
+    # 5. Allowed countries contextual fallback
+    if allowed_countries and len(allowed_countries) == 1:
+        single_c = allowed_countries[0].strip()
+        if single_c:
+            return normalize_country_name(single_c)
+
+    return "Unknown"
 
 
 def is_country_allowed(email, allowed_countries=None, author_name="", paper_title="", affiliation="", doi=""):
@@ -640,7 +1092,7 @@ def is_country_allowed(email, allowed_countries=None, author_name="", paper_titl
         if clean_allowed:
             # Direct domain check
             for c in clean_allowed:
-                rule = COUNTRY_DOMAIN_RULES.get(c)
+                rule = COUNTRY_DOMAIN_RULES.get(c) or COUNTRY_DOMAIN_RULES.get(normalize_country_name(c))
                 if not rule:
                     continue
                 if any(domain.endswith(sfx) for sfx in rule["domain_suffixes"]):
@@ -651,7 +1103,7 @@ def is_country_allowed(email, allowed_countries=None, author_name="", paper_titl
             # Affiliation text check
             if aff_lower:
                 for c in clean_allowed:
-                    rule = COUNTRY_DOMAIN_RULES.get(c)
+                    rule = COUNTRY_DOMAIN_RULES.get(c) or COUNTRY_DOMAIN_RULES.get(normalize_country_name(c))
                     if not rule:
                         continue
                     if any(kw in aff_lower for kw in rule["keywords"]):
@@ -662,7 +1114,7 @@ def is_country_allowed(email, allowed_countries=None, author_name="", paper_titl
             if domain in generic_domains and doi:
                 iso_set = set()
                 for c in clean_allowed:
-                    rule = COUNTRY_DOMAIN_RULES.get(c)
+                    rule = COUNTRY_DOMAIN_RULES.get(c) or COUNTRY_DOMAIN_RULES.get(normalize_country_name(c))
                     if rule:
                         iso_set.update(rule["iso"])
 
@@ -780,11 +1232,21 @@ def verify_single_record(record, api_key=None, allowed_countries=None):
     if status == "Undeliverable":
         return False, None, reason
 
-    # Cleaned record with strictly the 4 requested columns in sequential order
+    # Detect full country name
+    detected_country = detect_country(
+        email=cleaned_email,
+        doi=cleaned_doi,
+        paper_title=cleaned_title,
+        allowed_countries=allowed_countries
+    )
+
+    # Cleaned record with strictly the 5 requested columns in sequential order:
+    # Paper Title | Author Name | Email ID | Country | DOI
     cleaned_record = {
         "Paper Title": cleaned_title,
         "Author Name": cleaned_author,
         "Email ID": cleaned_email,
+        "Country": detected_country,
         "DOI": cleaned_doi
     }
     return True, cleaned_record, "Valid"
@@ -793,7 +1255,7 @@ def verify_single_record(record, api_key=None, allowed_countries=None):
 def normalize_and_realign_records(records):
     """
     Normalizes and repairs unaligned records from any uploaded Excel or CSV file.
-    Fixes shifted columns, strips bad whitespace, and returns clean dicts.
+    Fixes shifted columns, strips bad whitespace, detects countries, and returns clean dicts.
     """
     if not records:
         return []
@@ -819,6 +1281,14 @@ def normalize_and_realign_records(records):
             if k in rec and rec[k] is not None:
                 email = str(rec[k]).strip()
                 break
+
+        country_val = ""
+        for k in ["Country", "country", "Nation", "nation", "Location", "location", "Region", "region"]:
+            if k in rec and rec[k] is not None:
+                raw_c = str(rec[k]).strip()
+                if raw_c and raw_c.lower() not in ("nan", "none", "null", "n/a", "na", ""):
+                    country_val = normalize_country_name(raw_c)
+                    break
 
         doi = ""
         for k in ["DOI", "doi", "Doi", "link", "url"]:
@@ -851,10 +1321,14 @@ def normalize_and_realign_records(records):
         c_author = clean_author_name(author, email=c_email)
         c_doi = re.sub(r'[\r\n\t]+', '', doi).strip()
 
+        if not country_val or country_val.lower() == "unknown":
+            country_val = detect_country(c_email, doi=c_doi, affiliation="", paper_title=c_title, allowed_countries=None)
+
         realigned.append({
             "Paper Title": c_title,
             "Author Name": c_author,
             "Email ID": c_email,
+            "Country": country_val or "Unknown",
             "DOI": c_doi
         })
     return realigned

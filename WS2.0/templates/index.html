@@ -280,47 +280,156 @@
                                 </div>
                             </div>
                             <p class="text-xs text-slate-500">Leave all unchecked = no country filter</p>
-                            <div class="country-scroll space-y-2 max-h-52 overflow-y-auto pr-1">
-                                <!-- 13 countries from the screenshot -->
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="USA"> USA
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Italy"> Italy
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="UK"> UK
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Spain"> Spain
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Romania"> Romania
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="France"> France
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Brazil"> Brazil
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Germany"> Germany
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Australia"> Australia
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Canada"> Canada
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Mexico"> Mexico
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Saudi Arabia"> Saudi Arabia
-                                </label>
-                                <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
-                                    <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Egypt"> Egypt
-                                </label>
+                            <div class="country-scroll space-y-3 max-h-52 overflow-y-auto pr-1">
+                                <!-- North America -->
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400/90 py-0.5 border-b border-slate-700/60 mb-1 flex items-center justify-between">
+                                        <span>North America</span>
+                                    </div>
+                                    <div class="space-y-1.5 pl-0.5">
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="United States"> United States
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Canada"> Canada
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Mexico"> Mexico
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Europe -->
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400/90 py-0.5 border-b border-slate-700/60 mb-1 flex items-center justify-between">
+                                        <span>Europe</span>
+                                    </div>
+                                    <div class="space-y-1.5 pl-0.5">
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="United Kingdom"> United Kingdom
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Germany"> Germany
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="France"> France
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Netherlands"> Netherlands
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Belgium"> Belgium
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Switzerland"> Switzerland
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Sweden"> Sweden
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Norway"> Norway
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Denmark"> Denmark
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Finland"> Finland
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Ireland"> Ireland
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Austria"> Austria
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Luxembourg"> Luxembourg
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Iceland"> Iceland
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Italy"> Italy
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Spain"> Spain
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Portugal"> Portugal
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Romania"> Romania
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Asia -->
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400/90 py-0.5 border-b border-slate-700/60 mb-1 flex items-center justify-between">
+                                        <span>Asia</span>
+                                    </div>
+                                    <div class="space-y-1.5 pl-0.5">
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Japan"> Japan
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="South Korea"> South Korea
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Singapore"> Singapore
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Israel"> Israel
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="United Arab Emirates"> United Arab Emirates
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Qatar"> Qatar
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Saudi Arabia"> Saudi Arabia
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Kuwait"> Kuwait
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Bahrain"> Bahrain
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Oman"> Oman
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Oceania -->
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400/90 py-0.5 border-b border-slate-700/60 mb-1 flex items-center justify-between">
+                                        <span>Oceania</span>
+                                    </div>
+                                    <div class="space-y-1.5 pl-0.5">
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Australia"> Australia
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="New Zealand"> New Zealand
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Other Regions -->
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400/90 py-0.5 border-b border-slate-700/60 mb-1 flex items-center justify-between">
+                                        <span>Other Regions</span>
+                                    </div>
+                                    <div class="space-y-1.5 pl-0.5">
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Brazil"> Brazil
+                                        </label>
+                                        <label class="flex items-center gap-2.5 cursor-pointer hover:text-white text-slate-300 text-sm">
+                                            <input type="checkbox" class="filter-check country-cb" name="countries[]" value="Egypt"> Egypt
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -542,6 +651,7 @@
                             <th class="px-4 py-3">Paper Title</th>
                             <th class="px-4 py-3">Author Name</th>
                             <th class="px-4 py-3">Email ID</th>
+                            <th class="px-4 py-3">Country</th>
                             <th class="px-4 py-3">DOI</th>
                         </tr>
                     </thead>
@@ -713,6 +823,7 @@
                                 <th class="px-4 py-3">Paper Title</th>
                                 <th class="px-4 py-3">Author Name</th>
                                 <th class="px-4 py-3">Email ID</th>
+                                <th class="px-4 py-3">Country</th>
                                 <th class="px-4 py-3">DOI</th>
                             </tr>
                         </thead>
@@ -1081,6 +1192,7 @@
                         <td class="px-4 py-3 max-w-md truncate" title="${row['Paper Title'] || ''}">${row['Paper Title'] || ''}</td>
                         <td class="px-4 py-3 font-semibold text-white">${row['Author Name'] || ''}</td>
                         <td class="px-4 py-3 text-emerald-400 font-mono text-xs">${row['Email ID'] || ''}</td>
+                        <td class="px-4 py-3 text-slate-300 font-medium text-xs"><span class="px-2 py-0.5 rounded bg-slate-700/60 border border-slate-600/50 text-sky-300">${row['Country'] || 'Unknown'}</span></td>
                         <td class="px-4 py-3 font-mono text-xs text-slate-400">${row['DOI'] || ''}</td>
                     `;
                     tableBody.appendChild(tr);
@@ -1534,6 +1646,7 @@
                                     <td class="px-4 py-3 max-w-md truncate" title="${row['Paper Title'] || ''}">${row['Paper Title'] || ''}</td>
                                     <td class="px-4 py-3 font-semibold text-white">${row['Author Name'] || ''}</td>
                                     <td class="px-4 py-3 text-emerald-400 font-mono text-xs">${row['Email ID'] || ''}</td>
+                                    <td class="px-4 py-3 text-slate-300 font-medium text-xs"><span class="px-2 py-0.5 rounded bg-slate-700/60 border border-slate-600/50 text-sky-300">${row['Country'] || 'Unknown'}</span></td>
                                     <td class="px-4 py-3 font-mono text-xs text-slate-400">${row['DOI'] || ''}</td>
                                 `;
                                 filterTableBody.appendChild(tr);

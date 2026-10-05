@@ -8,19 +8,49 @@ log = logging.getLogger("extraction.europepmc")
 # Country display name → EuropePMC COUNTRY field values
 # EuropePMC uses full English country names in its query syntax
 _COUNTRY_NAMES = {
-    "USA":          "United States",
-    "UK":           "United Kingdom",
-    "Italy":        "Italy",
-    "Spain":        "Spain",
-    "Romania":      "Romania",
-    "France":       "France",
-    "Brazil":       "Brazil",
-    "Germany":      "Germany",
-    "Australia":    "Australia",
-    "Canada":       "Canada",
-    "Mexico":       "Mexico",
-    "Saudi Arabia": "Saudi Arabia",
-    "Egypt":        "Egypt",
+    # North America
+    "USA":                  "United States",
+    "United States":        "United States",
+    "Canada":               "Canada",
+    "Mexico":               "Mexico",
+    # Europe
+    "UK":                   "United Kingdom",
+    "United Kingdom":       "United Kingdom",
+    "Germany":              "Germany",
+    "France":               "France",
+    "Netherlands":          "Netherlands",
+    "Belgium":              "Belgium",
+    "Switzerland":          "Switzerland",
+    "Sweden":               "Sweden",
+    "Norway":               "Norway",
+    "Denmark":              "Denmark",
+    "Finland":              "Finland",
+    "Ireland":              "Ireland",
+    "Austria":              "Austria",
+    "Luxembourg":           "Luxembourg",
+    "Iceland":              "Iceland",
+    "Italy":                "Italy",
+    "Spain":                "Spain",
+    "Portugal":             "Portugal",
+    "Romania":              "Romania",
+    # Asia
+    "Japan":                "Japan",
+    "South Korea":          "South Korea",
+    "Singapore":            "Singapore",
+    "Israel":               "Israel",
+    "United Arab Emirates": "United Arab Emirates",
+    "UAE":                  "United Arab Emirates",
+    "Qatar":                "Qatar",
+    "Saudi Arabia":         "Saudi Arabia",
+    "Kuwait":               "Kuwait",
+    "Bahrain":              "Bahrain",
+    "Oman":                 "Oman",
+    # Oceania
+    "Australia":            "Australia",
+    "New Zealand":          "New Zealand",
+    # Other Regions
+    "Brazil":               "Brazil",
+    "Egypt":                "Egypt",
 }
 
 

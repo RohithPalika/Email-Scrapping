@@ -16,19 +16,49 @@ STEALTH_HEADERS = {
 }
 
 _COUNTRY_CODES = {
-    "USA":          "US",
-    "UK":           "GB",
-    "Italy":        "IT",
-    "Spain":        "ES",
-    "Romania":      "RO",
-    "France":       "FR",
-    "Brazil":       "BR",
-    "Germany":      "DE",
-    "Australia":    "AU",
-    "Canada":       "CA",
-    "Mexico":       "MX",
-    "Saudi Arabia": "SA",
-    "Egypt":        "EG",
+    # North America
+    "USA":                  "US",
+    "United States":        "US",
+    "Canada":               "CA",
+    "Mexico":               "MX",
+    # Europe
+    "UK":                   "GB",
+    "United Kingdom":       "GB",
+    "Germany":              "DE",
+    "France":               "FR",
+    "Netherlands":          "NL",
+    "Belgium":              "BE",
+    "Switzerland":          "CH",
+    "Sweden":               "SE",
+    "Norway":               "NO",
+    "Denmark":              "DK",
+    "Finland":              "FI",
+    "Ireland":              "IE",
+    "Austria":              "AT",
+    "Luxembourg":           "LU",
+    "Iceland":              "IS",
+    "Italy":                "IT",
+    "Spain":                "ES",
+    "Portugal":             "PT",
+    "Romania":              "RO",
+    # Asia
+    "Japan":                "JP",
+    "South Korea":          "KR",
+    "Singapore":            "SG",
+    "Israel":               "IL",
+    "United Arab Emirates": "AE",
+    "UAE":                  "AE",
+    "Qatar":                "QA",
+    "Saudi Arabia":         "SA",
+    "Kuwait":               "KW",
+    "Bahrain":              "BH",
+    "Oman":                 "OM",
+    # Oceania
+    "Australia":            "AU",
+    "New Zealand":          "NZ",
+    # Other Regions
+    "Brazil":               "BR",
+    "Egypt":                "EG",
 }
 
 
