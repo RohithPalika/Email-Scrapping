@@ -9,6 +9,8 @@ _PLOS_TYPE_MAP = {
     "Article":          "Research Article",
     "Review":           "Review",
     "Systematic Review":"Systematic Review",
+    "Case Reports":     "Case Report",
+    "Case Report":      "Case Report",
     "Brief Report":     "Short Report",
 }
 
@@ -62,6 +64,8 @@ def fetch_plos_papers(topic, limit, target_dir, filters=None):
         log.error(f"[PLOS] API error: {e}")
         return []
 
+    os.makedirs(target_dir, exist_ok=True)
+
     records = []
     for i, doc in enumerate(docs, start=1):
         doi          = doc.get("id")
@@ -74,6 +78,7 @@ def fetch_plos_papers(topic, limit, target_dir, filters=None):
         try:
             pdf_resp = requests.get(pdf_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=25)
             if pdf_resp.status_code == 200 and b"%PDF" in pdf_resp.content[:10]:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 with open(file_path, "wb") as f:
                     f.write(pdf_resp.content)
                 records.append({

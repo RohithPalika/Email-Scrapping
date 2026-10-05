@@ -7,19 +7,49 @@ log = logging.getLogger("extraction.openalex")
 
 # Country name → ISO alpha-2 code (OpenAlex uses these codes)
 _COUNTRY_CODES = {
-    "USA":          "US",
-    "UK":           "GB",
-    "Italy":        "IT",
-    "Spain":        "ES",
-    "Romania":      "RO",
-    "France":       "FR",
-    "Brazil":       "BR",
-    "Germany":      "DE",
-    "Australia":    "AU",
-    "Canada":       "CA",
-    "Mexico":       "MX",
-    "Saudi Arabia": "SA",
-    "Egypt":        "EG",
+    # North America
+    "USA":                  "US",
+    "United States":        "US",
+    "Canada":               "CA",
+    "Mexico":               "MX",
+    # Europe
+    "UK":                   "GB",
+    "United Kingdom":       "GB",
+    "Germany":              "DE",
+    "France":               "FR",
+    "Netherlands":          "NL",
+    "Belgium":              "BE",
+    "Switzerland":          "CH",
+    "Sweden":               "SE",
+    "Norway":               "NO",
+    "Denmark":              "DK",
+    "Finland":              "FI",
+    "Ireland":              "IE",
+    "Austria":              "AT",
+    "Luxembourg":           "LU",
+    "Iceland":              "IS",
+    "Italy":                "IT",
+    "Spain":                "ES",
+    "Portugal":             "PT",
+    "Romania":              "RO",
+    # Asia
+    "Japan":                "JP",
+    "South Korea":          "KR",
+    "Singapore":            "SG",
+    "Israel":               "IL",
+    "United Arab Emirates": "AE",
+    "UAE":                  "AE",
+    "Qatar":                "QA",
+    "Saudi Arabia":         "SA",
+    "Kuwait":               "KW",
+    "Bahrain":              "BH",
+    "Oman":                 "OM",
+    # Oceania
+    "Australia":            "AU",
+    "New Zealand":          "NZ",
+    # Other Regions
+    "Brazil":               "BR",
+    "Egypt":                "EG",
 }
 
 # Article type name → OpenAlex type string
@@ -27,6 +57,8 @@ _TYPE_MAP = {
     "Article":          "article",
     "Review":           "review",
     "Systematic Review":"review",
+    "Case Reports":     "article",
+    "Case Report":      "article",
     "Brief Report":     "article",
 }
 
@@ -75,7 +107,7 @@ def fetch_openalex_papers(topic, limit, target_dir, filters=None):
     params = {
         "search":    topic,
         "filter":    filter_str,
-        "per-page":  limit * 2,   # Fetch extra to handle direct PDF access fallbacks
+        "per-page":  min(max(limit * 4, 25), 200),   # Fetch extra candidates up to OpenAlex max per-page (200)
         "sort":      "relevance_score:desc",
         "mailto":    "23r25a6702@mlrit.ac.in",
     }
@@ -98,6 +130,11 @@ def fetch_openalex_papers(topic, limit, target_dir, filters=None):
 
     records = []
     saved_count = 0
+
+    PDF_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "application/pdf,application/xhtml+xml,text/html,*/*;q=0.9",
+    }
 
     for item in items:
         if saved_count >= limit:
@@ -135,10 +172,11 @@ def fetch_openalex_papers(topic, limit, target_dir, filters=None):
 
         for url in pdf_urls:
             try:
-                pdf_resp = requests.get(url, headers=headers, timeout=25, allow_redirects=True)
+                pdf_resp = requests.get(url, headers=PDF_HEADERS, timeout=20, allow_redirects=True)
                 if pdf_resp.status_code == 200 and (
                     pdf_resp.content.startswith(b"%PDF") or b"%PDF-" in pdf_resp.content[:1024]
                 ):
+                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
                     with open(file_path, "wb") as f:
                         f.write(pdf_resp.content)
                     download_success = True

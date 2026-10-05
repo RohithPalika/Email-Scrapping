@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 import requests
 
@@ -7,19 +8,49 @@ log = logging.getLogger("extraction.europepmc")
 # Country display name → EuropePMC COUNTRY field values
 # EuropePMC uses full English country names in its query syntax
 _COUNTRY_NAMES = {
-    "USA":          "United States",
-    "UK":           "United Kingdom",
-    "Italy":        "Italy",
-    "Spain":        "Spain",
-    "Romania":      "Romania",
-    "France":       "France",
-    "Brazil":       "Brazil",
-    "Germany":      "Germany",
-    "Australia":    "Australia",
-    "Canada":       "Canada",
-    "Mexico":       "Mexico",
-    "Saudi Arabia": "Saudi Arabia",
-    "Egypt":        "Egypt",
+    # North America
+    "USA":                  "United States",
+    "United States":        "United States",
+    "Canada":               "Canada",
+    "Mexico":               "Mexico",
+    # Europe
+    "UK":                   "United Kingdom",
+    "United Kingdom":       "United Kingdom",
+    "Germany":              "Germany",
+    "France":               "France",
+    "Netherlands":          "Netherlands",
+    "Belgium":              "Belgium",
+    "Switzerland":          "Switzerland",
+    "Sweden":               "Sweden",
+    "Norway":               "Norway",
+    "Denmark":              "Denmark",
+    "Finland":              "Finland",
+    "Ireland":              "Ireland",
+    "Austria":              "Austria",
+    "Luxembourg":           "Luxembourg",
+    "Iceland":              "Iceland",
+    "Italy":                "Italy",
+    "Spain":                "Spain",
+    "Portugal":             "Portugal",
+    "Romania":              "Romania",
+    # Asia
+    "Japan":                "Japan",
+    "South Korea":          "South Korea",
+    "Singapore":            "Singapore",
+    "Israel":               "Israel",
+    "United Arab Emirates": "United Arab Emirates",
+    "UAE":                  "United Arab Emirates",
+    "Qatar":                "Qatar",
+    "Saudi Arabia":         "Saudi Arabia",
+    "Kuwait":               "Kuwait",
+    "Bahrain":              "Bahrain",
+    "Oman":                 "Oman",
+    # Oceania
+    "Australia":            "Australia",
+    "New Zealand":          "New Zealand",
+    # Other Regions
+    "Brazil":               "Brazil",
+    "Egypt":                "Egypt",
 }
 
 
@@ -55,6 +86,20 @@ def fetch_europepmc_papers(topic, limit, target_dir, filters=None):
         country_clause = " OR ".join(f'COUNTRY:"{c}"' for c in mapped)
         query_parts.append(f"({country_clause})")
 
+    # Article types — EuropePMC supports PUB_TYPE:"..."
+    article_types = filters.get("article_types", [])
+    if article_types:
+        epmc_types = []
+        for t in article_types:
+            if t in ("Case Reports", "Case Report"):
+                epmc_types.append('PUB_TYPE:"case reports"')
+            elif t == "Review":
+                epmc_types.append('PUB_TYPE:"review"')
+            elif t == "Systematic Review":
+                epmc_types.append('PUB_TYPE:"systematic review"')
+        if epmc_types:
+            query_parts.append(f"({' OR '.join(epmc_types)})")
+
     query = " AND ".join(query_parts)
     log.info(f"[EuropePMC] Query: {query!r}")
 
@@ -68,12 +113,11 @@ def fetch_europepmc_papers(topic, limit, target_dir, filters=None):
 
     session = requests.Session()
     session.headers.update({
-        "User-Agent": "AcademicEmailExtractor/1.0 (Research Outreach Tool)",
-        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     })
 
     try:
-        resp = session.get(base_url, params=params, timeout=30)
+        resp = session.get(base_url, params=params, headers={"Accept": "application/json"}, timeout=30)
         if resp.status_code != 200:
             log.error(f"[EuropePMC] HTTP {resp.status_code}")
             return []
@@ -97,6 +141,37 @@ def fetch_europepmc_papers(topic, limit, target_dir, filters=None):
         authors_meta = [a.strip() for a in author_string.split(",") if a.strip()]
         source_journal = item.get("journalTitle", "Europe PMC") or "Europe PMC"
 
+        # Strategy 1: XML-First via Europe PMC official REST API
+        # Avoids Cloudflare 403 blocks on Europe PMC PDF endpoints and is 10x faster.
+        if pmcid:
+            xml_url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
+            try:
+                xml_resp = session.get(xml_url, headers={"Accept": "application/xml, text/xml, */*"}, timeout=15)
+                if xml_resp.status_code == 200:
+                    raw_emails = re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', xml_resp.text)
+                    clean_emails = [e.strip().rstrip('.') for e in raw_emails if '@' in e]
+                    # Filter out publisher/editorial generic support emails
+                    clean_emails = [
+                        e for e in clean_emails
+                        if not any(e.lower().startswith(p) for p in ("plosone@", "onepress@", "customercare@", "support@", "help@", "info@", "editorial@"))
+                    ]
+                    if clean_emails:
+                        saved += 1
+                        records.append({
+                            "file_path": None,
+                            "pdf_name": f"{pmcid}.xml",
+                            "title": title,
+                            "authors": authors_meta,
+                            "doi": doi,
+                            "source_journal": source_journal,
+                            "_html_emails": list(dict.fromkeys(clean_emails)),
+                        })
+                        log.info(f"[EuropePMC] ({saved}/{limit}) Extracted {len(clean_emails)} emails via fullTextXML for {pmcid}")
+                        continue
+            except Exception as xml_err:
+                log.warning(f"[EuropePMC] XML extraction failed for {pmcid}: {xml_err}")
+
+        # Strategy 2: Fallback to direct PDF download attempts
         pdf_urls = []
         if pmcid:
             pdf_urls.append(f"https://europepmc.org/articles/{pmcid}?pdf=render")

@@ -64,6 +64,8 @@ def _scopus_search(topic, count, filters=None):
         "Article":          "ar",
         "Review":           "re",
         "Systematic Review":"re",
+        "Case Reports":     "ar",
+        "Case Report":      "ar",
         "Brief Report":     "ar",
     }
     scopus_types = list({_SCOPUS_TYPES[t] for t in article_types if t in _SCOPUS_TYPES})
