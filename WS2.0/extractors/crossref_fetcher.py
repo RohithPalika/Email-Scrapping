@@ -20,7 +20,7 @@ STEALTH_HEADERS = {
     "Accept": "application/pdf,application/xhtml+xml,text/html,application/xml;q=0.9,*/*;q=0.8"
 }
 
-# Publishers that ALWAYS block automated PDF downloads.
+# Publishers that ALWAYS block automated PDF downloads or stall indefinitely.
 PUBLISHER_BLOCKLIST = [
     "link.springer.com",
     "www.nature.com",
@@ -35,6 +35,10 @@ PUBLISHER_BLOCKLIST = [
     "nejm.org",
     "bmj.com",
     "thelancet.com",
+    "hilarispublisher.com",
+    "longdom.org",
+    "omicsonline.org",
+    "imedpub.com",
 ]
 
 # UI country name → OpenAlex ISO code (used in post-fetch affiliation check)
@@ -107,8 +111,8 @@ def _all_urls_blocked(urls):
     )
 
 
-def _download_pdf(url, file_path, timeout=12):
-    """Download a PDF. Returns True on success, False on any failure."""
+def _download_pdf(url, file_path, timeout=4):
+    """Download a PDF with fast 4-second timeout. Returns True on success, False on any failure."""
     try:
         resp = requests.get(url, headers=STEALTH_HEADERS, timeout=timeout, allow_redirects=True)
         if resp.status_code == 200 and (
@@ -243,8 +247,14 @@ def fetch_crossref_papers(topic, limit, target_dir, filters=None):
     saved_count= 0
     offset     = 0
     max_offset = 1000  # Prevent infinite loops (max 10 pages of 100)
+    start_fetch_time = time.time()
+    max_fetch_duration = 25.0  # Max 25s total search duration to guarantee snappy execution
 
     while saved_count < limit and offset < max_offset:
+        if time.time() - start_fetch_time > max_fetch_duration:
+            log.info(f"[Crossref] Reached max fetch duration ({max_fetch_duration}s). Returning {len(records)} papers.")
+            break
+
         params = {
             "query":   topic,
             "filter":  crossref_filter,
@@ -255,8 +265,8 @@ def fetch_crossref_papers(topic, limit, target_dir, filters=None):
         }
 
         try:
-            time.sleep(1)
-            resp = requests.get(base_url, params=params, headers=API_HEADERS, timeout=15)
+            time.sleep(0.5)
+            resp = requests.get(base_url, params=params, headers=API_HEADERS, timeout=8)
             if resp.status_code != 200:
                 log.warning(f"[Crossref] Search failed at offset {offset}. HTTP {resp.status_code}")
                 break
@@ -278,7 +288,7 @@ def fetch_crossref_papers(topic, limit, target_dir, filters=None):
         log.info(f"[Crossref] Found open-access PDFs for {len(doi_to_pdf)} / {len(all_dois)} papers in this chunk.")
 
         for item in items:
-            if saved_count >= limit:
+            if saved_count >= limit or (time.time() - start_fetch_time > max_fetch_duration):
                 break
 
             doi = item.get("DOI", "N/A")

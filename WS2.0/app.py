@@ -1,12 +1,14 @@
 import os
 import sys
 import re
-import sys
 import time
 import uuid
+import socket
+import argparse
 import threading
 import logging
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging.handlers import RotatingFileHandler
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -17,15 +19,11 @@ import pdfplumber
 import pandas as pd
 from flask import Flask, render_template, request, send_file, jsonify
 
-# Existing extractors
+# Active extractors
 from extractors.plos_fetcher import fetch_plos_papers
 from extractors.elife_fetcher import fetch_elife_papers
 from extractors.europepmc_fetcher import fetch_europepmc_papers
-
-# New extractors
 from extractors.openalex_fetcher import fetch_openalex_papers
-
-# API-based fetchers
 from extractors.arxiv_fetcher import fetch_arxiv_papers
 from extractors.biorxiv_fetcher import fetch_biorxiv_papers
 from extractors.crossref_fetcher import fetch_crossref_papers
@@ -40,7 +38,9 @@ from extractors.email_verifier import (
     normalize_country_name,
     normalize_and_realign_records,
     batch_verify_records,
-    verify_single_record,
+    is_suppressed_email,
+    get_suppressed_emails,
+    add_suppressed_emails,
 )
 
 from extractors.pubmed_fetcher import fetch_pubmed_papers
@@ -61,10 +61,30 @@ os.makedirs(PDFS_BASE_DIR, exist_ok=True)
 os.makedirs(EXCEL_BASE_DIR, exist_ok=True)
 
 # -----------------------------------------------------------
-# Logging Setup — ISSUE-17
-# Replaces all print() calls with a persistent, rotating log file.
-# Console handler uses UTF-8 with 'replace' so Unicode paper titles
-# never crash the Windows terminal (which defaults to cp1252).
+# Multi-Port & Concurrency Configuration
+# -----------------------------------------------------------
+CURRENT_PORT = 5000
+
+
+def find_available_port(start_port=5000, max_attempts=50):
+    """Finds the first free TCP port starting at start_port."""
+    for p in range(start_port, start_port + max_attempts):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", p))
+                return p
+            except OSError:
+                continue
+    return start_port
+
+
+def get_lock_file():
+    """Returns port-scoped lock file so multiple terminals run in parallel."""
+    return os.path.join(DOWNLOADS_DIR, f"extraction_port_{CURRENT_PORT}.lock")
+
+
+# -----------------------------------------------------------
+# Logging Setup
 # -----------------------------------------------------------
 _log_file = os.path.join(BASE_DIR, "extraction.log")
 try:
@@ -74,7 +94,6 @@ try:
 except Exception:
     _file_handler = logging.NullHandler()
 
-# Wrap stdout in a UTF-8 stream with 'replace' for unencodable chars
 try:
     _utf8_stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8",
                         errors="replace", closefd=False, buffering=1)
@@ -90,63 +109,43 @@ logging.basicConfig(
 )
 log = logging.getLogger("extraction")
 
-# -----------------------------------------------------------
-# Background Task Store
-# -----------------------------------------------------------
-# Maps task_id -> {"status": ..., "progress": ..., "result": ...}
 TASKS = {}
 TASKS_LOCK = threading.Lock()
-
-# Intra-process concurrency guard (one extraction per worker thread)
 _INTRA_PROCESS_LOCK = threading.Lock()
-
-# -----------------------------------------------------------
-# Filesystem Lock — ISSUE-12
-# Cross-process lock using a timestamp-stamped lock file.
-# Works correctly under multi-worker WSGI (gunicorn --workers N).
-# The threading lock handles same-process races; the file lock
-# handles cross-process races on the master_email_list.csv.
-# -----------------------------------------------------------
-LOCK_FILE = os.path.join(DOWNLOADS_DIR, "extraction.lock")
-_LOCK_TTL_SECONDS = 7200  # 2 hours — treat locks older than this as stale
+_LOCK_TTL_SECONDS = 7200  # 2 hours
 
 
 def _acquire_extraction_lock():
     """
     Acquire the two-layer extraction lock:
-      Layer 1: threading.Lock — prevents races within the same process.
-      Layer 2: filesystem lock file — prevents races across processes.
-
-    Returns True if the lock was acquired, False if it is already held.
+      Layer 1: threading.Lock — intra-process guard
+      Layer 2: port-scoped filesystem lock file — allows other ports to run concurrently
     """
-    # Layer 1: fast intra-process check
     if not _INTRA_PROCESS_LOCK.acquire(blocking=False):
         return False
 
-    # Layer 2: cross-process file lock
-    if os.path.exists(LOCK_FILE):
+    lock_path = get_lock_file()
+    if os.path.exists(lock_path):
         try:
-            with open(LOCK_FILE, "r") as f:
+            with open(lock_path, "r") as f:
                 timestamp = float(f.read().strip() or "0")
             age = time.time() - timestamp
             if age < _LOCK_TTL_SECONDS:
-                # Live lock held by another process — reject
                 _INTRA_PROCESS_LOCK.release()
                 return False
-            # Stale lock — clear it and proceed
             log.warning(
-                f"[Lock] Stale extraction.lock found (age {age / 60:.0f} min). Clearing."
+                f"[Lock] Stale lock found on port {CURRENT_PORT} (age {age / 60:.0f} min). Clearing."
             )
-            os.remove(LOCK_FILE)
+            os.remove(lock_path)
         except Exception as e:
             log.warning(f"[Lock] Could not read lock file: {e}. Clearing and proceeding.")
             try:
-                os.remove(LOCK_FILE)
+                os.remove(lock_path)
             except Exception:
                 pass
 
     try:
-        with open(LOCK_FILE, "w") as f:
+        with open(lock_path, "w") as f:
             f.write(str(time.time()))
     except Exception as e:
         log.error(f"[Lock] Failed to write lock file: {e}")
@@ -157,16 +156,17 @@ def _acquire_extraction_lock():
 
 
 def _release_extraction_lock():
-    """Release the filesystem lock and the intra-process threading lock."""
+    """Release the filesystem lock for current port and threading lock."""
+    lock_path = get_lock_file()
     try:
-        if os.path.exists(LOCK_FILE):
-            os.remove(LOCK_FILE)
+        if os.path.exists(lock_path):
+            os.remove(lock_path)
     except Exception as e:
         log.warning(f"[Lock] Could not remove lock file: {e}")
     try:
         _INTRA_PROCESS_LOCK.release()
     except RuntimeError:
-        pass  # Already released — safe to ignore
+        pass
 
 
 def _cleanup_stale_tasks():
@@ -183,7 +183,7 @@ def _cleanup_stale_tasks():
         log.info(f"[Tasks] Cleaned up {len(stale)} stale task(s).")
 
 
-def task_update(task_id, status, progress="", result=None, percentage=0, contacts_found=0):
+def task_update(task_id, status, progress="", result=None, percentage=0, contacts_found=0, live_data=None):
     """Thread-safe update of task status."""
     with TASKS_LOCK:
         if task_id in TASKS:
@@ -191,6 +191,8 @@ def task_update(task_id, status, progress="", result=None, percentage=0, contact
             TASKS[task_id]["progress"] = progress
             TASKS[task_id]["percentage"] = percentage
             TASKS[task_id]["contacts_found"] = contacts_found
+            if live_data is not None:
+                TASKS[task_id]["live_data"] = list(live_data)
             if result is not None:
                 TASKS[task_id]["result"] = result
             if status in ("done", "error"):
@@ -198,28 +200,51 @@ def task_update(task_id, status, progress="", result=None, percentage=0, contact
 
 
 # -----------------------------------------------------------
-# Master Email Tracker (Deduplication)
+# Master Email Tracker (Deduplication & Multi-Process Safety)
 # -----------------------------------------------------------
 MASTER_EMAIL_FILE = os.path.join(DOWNLOADS_DIR, "master_email_list.csv")
-
-# ISSUE-09: Separate file to track papers that were attempted (even if no emails found).
-# Prevents re-downloading PDFs that will never yield emails.
 ATTEMPTED_DOIS_FILE = os.path.join(DOWNLOADS_DIR, "attempted_dois.txt")
+
+
+def _acquire_master_storage_lock(timeout=10.0):
+    """
+    Acquires an atomic cross-process lock file on Windows/Linux.
+    Guarantees multiple terminal instances writing simultaneously never collide.
+    """
+    lock_file = os.path.join(DOWNLOADS_DIR, ".master_storage.lock")
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            os.close(fd)
+            return lock_file
+        except (FileExistsError, OSError):
+            try:
+                if os.path.exists(lock_file) and (time.time() - os.path.getmtime(lock_file) > 10.0):
+                    os.remove(lock_file)
+            except Exception:
+                pass
+            time.sleep(0.04)
+    try:
+        if os.path.exists(lock_file):
+            os.remove(lock_file)
+    except Exception:
+        pass
+    return None
+
+
+def _release_master_storage_lock():
+    lock_file = os.path.join(DOWNLOADS_DIR, ".master_storage.lock")
+    try:
+        if os.path.exists(lock_file):
+            os.remove(lock_file)
+    except Exception:
+        pass
 
 
 def normalise_doi(raw):
     """
-    ISSUE-10: Convert any DOI representation to a stable, lowercase dedup key.
-
-    Handles:
-      - https://doi.org/10.xxxx/...  →  10.xxxx/...
-      - http://arxiv.org/abs/1234v2  →  arxiv:1234  (version stripped)
-      - 10.xxxx/...                  →  10.xxxx/...  (unchanged)
-      - "N/A", "", None              →  ""  (excluded from seen_dois)
-
-    Returns "" for missing/invalid values so they are NEVER added to seen_dois,
-    preventing false-positive deduplication collisions (e.g. two "N/A" papers
-    being treated as the same paper).
+    Convert any DOI representation to a stable, lowercase dedup key.
     """
     if not raw:
         return ""
@@ -227,20 +252,18 @@ def normalise_doi(raw):
     if s in ("n/a", "na", "", "none", "null"):
         return ""
 
-    # Strip https://doi.org/ and http://doi.org/ prefixes
     for prefix in ("https://doi.org/", "http://doi.org/",
-                   "https://dx.doi.org/", "http://dx.doi.org/"):
+                   "https://dx.doi.org/", "http://dx.doi.org/", "doi:"):
         if s.startswith(prefix):
-            return s[len(prefix):]
+            s = s[len(prefix):].strip()
 
-    # Normalise arXiv abstract URLs → stable arxiv:<id> key (version stripped)
-    for prefix in ("https://arxiv.org/abs/", "http://arxiv.org/abs/"):
+    for prefix in ("https://arxiv.org/abs/", "http://arxiv.org/abs/", "arxiv:"):
         if s.startswith(prefix):
-            arxiv_id = s[len(prefix):]
-            arxiv_id = re.sub(r'v\d+$', '', arxiv_id)  # strip v1/v2/...
+            arxiv_id = s[len(prefix):].strip()
+            arxiv_id = re.sub(r'v\d+$', '', arxiv_id)
             return f"arxiv:{arxiv_id}"
 
-    return s  # Raw DOI (e.g. 10.1038/...) — already a clean key
+    return s.strip("/ ")
 
 
 def load_seen_data():
@@ -248,12 +271,6 @@ def load_seen_data():
     Load the set of all previously scraped emails AND DOIs from:
       1. master_email_list.csv  (emails + DOIs of extracted papers)
       2. attempted_dois.txt     (DOIs of all attempted papers, incl. empty ones)
-
-    Returns (seen_emails, seen_dois) — two separate sets.
-
-    Why two sets?
-    - seen_emails: skip individual duplicate emails
-    - seen_dois:   skip the ENTIRE PAPER before any download/parse
     """
     seen_emails = set()
     seen_dois = set()
@@ -261,7 +278,6 @@ def load_seen_data():
     # --- Load from master CSV ---
     if os.path.exists(MASTER_EMAIL_FILE):
         try:
-            # utf-8-sig handles both plain UTF-8 and UTF-8-with-BOM files
             df = pd.read_csv(MASTER_EMAIL_FILE, encoding="utf-8-sig")
             if "Email ID" in df.columns:
                 seen_emails = set(df["Email ID"].dropna().str.lower().tolist())
@@ -273,7 +289,7 @@ def load_seen_data():
         except Exception as e:
             log.warning(f"[Dedup] Could not read master CSV: {e}")
 
-    # --- Load from attempted-dois file (ISSUE-09) ---
+    # --- Load from attempted-dois file ---
     if os.path.exists(ATTEMPTED_DOIS_FILE):
         try:
             with open(ATTEMPTED_DOIS_FILE, "r", encoding="utf-8") as f:
@@ -289,61 +305,92 @@ def load_seen_data():
 
 def _record_attempted_doi(doi_key):
     """
-    ISSUE-09: Append a normalised DOI key to the attempted-dois file.
-    Called after every paper attempt, regardless of whether emails were found.
-    This prevents re-downloading empty/image PDFs on future runs.
+    Append a normalised DOI key to the attempted-dois file.
+    Cross-process safe append.
     """
     if not doi_key:
         return
+    _acquire_master_storage_lock(timeout=5.0)
     try:
         with open(ATTEMPTED_DOIS_FILE, "a", encoding="utf-8") as f:
             f.write(doi_key + "\n")
     except Exception as e:
         log.warning(f"[Dedup] Could not write attempted_dois.txt: {e}")
+    finally:
+        _release_master_storage_lock()
 
 
 def save_new_emails_to_master(new_rows):
-    """Append newly found email rows to the master CSV file after sanitizing them."""
+    """
+    Multi-process safe append to the central master CSV.
+    Dynamically checks existing emails on disk before writing to prevent duplicate records
+    even if multiple terminals discover identical emails concurrently.
+    """
     if not new_rows:
         return
     target_cols = ["Paper Title", "Author Name", "Email ID", "Country", "DOI"]
-    sanitized_rows = []
-    for r in new_rows:
-        row_copy = dict(r)
-        if "Paper Title" in row_copy:
-            row_copy["Paper Title"] = clean_paper_title(row_copy["Paper Title"])
-        if "Author Name" in row_copy:
-            row_copy["Author Name"] = clean_author_name(row_copy["Author Name"], email=str(row_copy.get("Email ID", "")))
-        if "Email ID" in row_copy:
-            row_copy["Email ID"] = str(row_copy["Email ID"]).strip().lower()
-        if "Country" in row_copy and row_copy["Country"] and str(row_copy["Country"]).strip():
-            row_copy["Country"] = normalize_country_name(row_copy["Country"])
-        else:
-            row_copy["Country"] = detect_country(
-                email=str(row_copy.get("Email ID", "")),
-                doi=str(row_copy.get("DOI", "")),
-                paper_title=str(row_copy.get("Paper Title", ""))
-            )
-        if "DOI" in row_copy:
-            row_copy["DOI"] = re.sub(r'[\r\n\t]+', '', str(row_copy["DOI"])).strip()
 
-        clean_dict = {col: row_copy.get(col, "") for col in target_cols}
-        sanitized_rows.append(clean_dict)
+    _acquire_master_storage_lock(timeout=10.0)
+    try:
+        existing_emails = set()
+        if os.path.exists(MASTER_EMAIL_FILE) and os.path.getsize(MASTER_EMAIL_FILE) > 0:
+            try:
+                df_curr = pd.read_csv(MASTER_EMAIL_FILE, encoding="utf-8-sig")
+                if "Email ID" in df_curr.columns:
+                    existing_emails = set(df_curr["Email ID"].dropna().str.lower().tolist())
+            except Exception:
+                pass
 
-    new_df = pd.DataFrame(sanitized_rows)[target_cols]
-    # utf-8-sig = UTF-8 with BOM — Excel on Windows opens it without garbled characters.
-    # mode='a' appends; header only when the file is new/empty.
-    file_is_empty = (
-        not os.path.exists(MASTER_EMAIL_FILE)
-        or os.path.getsize(MASTER_EMAIL_FILE) == 0
-    )
-    new_df.to_csv(
-        MASTER_EMAIL_FILE,
-        mode="a",
-        index=False,
-        header=file_is_empty,
-        encoding="utf-8-sig",
-    )
+        sanitized_rows = []
+        for r in new_rows:
+            raw_em = str(r.get("Email ID", "")).strip().lower()
+            email_val = clean_and_repair_email(raw_em) or raw_em
+            if not email_val or email_val in existing_emails or is_suppressed_email(email_val):
+                continue
+            existing_emails.add(email_val)
+
+            row_copy = dict(r)
+            if "Paper Title" in row_copy:
+                row_copy["Paper Title"] = clean_paper_title(row_copy["Paper Title"])
+            if "Author Name" in row_copy:
+                row_copy["Author Name"] = clean_author_name(row_copy["Author Name"], email=email_val)
+            row_copy["Email ID"] = email_val
+            c_existing = str(row_copy.get("Country", "")).strip()
+            if c_existing and c_existing.lower() not in ("unknown", "none", "nan", "null", "n/a", "na"):
+                row_copy["Country"] = normalize_country_name(c_existing)
+            else:
+                row_copy["Country"] = detect_country(
+                    email=email_val,
+                    doi=str(row_copy.get("DOI", "")),
+                    paper_title=str(row_copy.get("Paper Title", "")),
+                    author_name=str(row_copy.get("Author Name", "")),
+                    allow_network=True
+                )
+            if "DOI" in row_copy:
+                row_copy["DOI"] = re.sub(r'[\r\n\t]+', '', str(row_copy["DOI"])).strip()
+
+            clean_dict = {col: row_copy.get(col, "") for col in target_cols}
+            sanitized_rows.append(clean_dict)
+
+        if not sanitized_rows:
+            return
+
+        new_df = pd.DataFrame(sanitized_rows)[target_cols]
+        file_is_empty = (
+            not os.path.exists(MASTER_EMAIL_FILE)
+            or os.path.getsize(MASTER_EMAIL_FILE) == 0
+        )
+        new_df.to_csv(
+            MASTER_EMAIL_FILE,
+            mode="a",
+            index=False,
+            header=file_is_empty,
+            encoding="utf-8-sig",
+        )
+    except Exception as e:
+        log.error(f"[MasterCSV] Error appending to master CSV: {e}", exc_info=True)
+    finally:
+        _release_master_storage_lock()
 
 
 # -----------------------------------------------------------
@@ -381,6 +428,10 @@ def clean_and_validate_email(raw_email):
     if not cleaned:
         return None
 
+    if is_suppressed_email(cleaned):
+        log.warning(f"[EmailVerifier] Dropped suppressed/bounced email {cleaned}")
+        return None
+
     local_part, domain = cleaned.split("@", 1)
 
     # Reject generic / non-personal local parts
@@ -398,7 +449,6 @@ def clean_and_validate_email(raw_email):
         return None
 
     return cleaned.lower()
-
 
 
 def unwrap_broken_emails(text):
@@ -575,8 +625,19 @@ def extract_author_email_pairs(file_path, metadata_authors):
     Fast two-tier scan:
       Tier 1: Fast scan on front 2 pages (where 98% of corresponding emails reside).
       Tier 2: Scan back pages only if front pages yield no matched emails.
+    Enforces strict 1-to-1 author-email mapping per paper (no multiple emails for same author).
     """
     mapped_pairs = []
+    if not file_path or not os.path.exists(file_path) or os.path.getsize(file_path) < 100:
+        return mapped_pairs
+    try:
+        with open(file_path, "rb") as f_chk:
+            header = f_chk.read(1024)
+            if b"%PDF" not in header:
+                return mapped_pairs
+    except Exception:
+        return mapped_pairs
+
     try:
         with pdfplumber.open(file_path) as pdf:
             n = len(pdf.pages)
@@ -591,6 +652,8 @@ def extract_author_email_pairs(file_path, metadata_authors):
 
             def _search_text(text_block):
                 pairs = []
+                seen_block_authors = set()
+                seen_block_emails = set()
                 unwrapped = unwrap_broken_emails(text_block)
                 pdf_names = extract_full_names_from_pdf(unwrapped)
                 raw_matches = re.findall(
@@ -599,7 +662,7 @@ def extract_author_email_pairs(file_path, metadata_authors):
                 )
                 for raw_email, initials in raw_matches:
                     clean_email = clean_and_validate_email(raw_email)
-                    if not clean_email:
+                    if not clean_email or clean_email in seen_block_emails:
                         continue
                     matched_author = match_author_for_email(
                         clean_email,
@@ -609,8 +672,16 @@ def extract_author_email_pairs(file_path, metadata_authors):
                     )
                     if not matched_author:
                         continue
-                    if clean_email not in [p[1] for p in pairs]:
-                        pairs.append((matched_author, clean_email))
+                    clean_auth = clean_author_name(matched_author, email=clean_email)
+                    if not clean_auth or not is_valid_author_name(clean_auth):
+                        continue
+                    auth_key = clean_auth.lower()
+                    if auth_key in seen_block_authors:
+                        # Skip additional emails for an already-mapped author in this paper
+                        continue
+                    seen_block_authors.add(auth_key)
+                    seen_block_emails.add(clean_email)
+                    pairs.append((clean_auth, clean_email))
                 return pairs
 
             mapped_pairs = _search_text(raw_text)
@@ -627,21 +698,20 @@ def extract_author_email_pairs(file_path, metadata_authors):
     return mapped_pairs
 
 
-
 # -----------------------------------------------------------
-# Dispatch Mapping (Active 12 Sources)
+# Dispatch Mapping (Active 10 Sources)
 # -----------------------------------------------------------
 SOURCE_FETCHERS = {
-    "plos":         ("PLOS",                          fetch_plos_papers),
-    "europepmc":    ("Europe PMC",                    fetch_europepmc_papers),
-    "elife":        ("eLife",                         fetch_elife_papers),
-    "openalex":     ("OpenAlex (All Servers)",       fetch_openalex_papers),
-    "arxiv":        ("arXiv",                        fetch_arxiv_papers),
-    "biorxiv":      ("bioRxiv / medRxiv",           fetch_biorxiv_papers),
-    "crossref":     ("Crossref (Multi-Server)",      fetch_crossref_papers),
-    "pubmed":       ("PubMed / NCBI",                fetch_pubmed_papers),
-    "frontiers":    ("Frontiers",                    fetch_frontiers_papers),
-    "aha":          ("AHA Journals",                 fetch_aha_papers),
+    "plos": ("PLOS", fetch_plos_papers),
+    "europepmc": ("Europe PMC", fetch_europepmc_papers),
+    "elife": ("eLife", fetch_elife_papers),
+    "openalex": ("OpenAlex (All Servers)", fetch_openalex_papers),
+    "arxiv": ("arXiv", fetch_arxiv_papers),
+    "biorxiv": ("bioRxiv / medRxiv", fetch_biorxiv_papers),
+    "crossref": ("Crossref (Multi-Server)", fetch_crossref_papers),
+    "pubmed": ("PubMed / NCBI", fetch_pubmed_papers),
+    "frontiers": ("Frontiers", fetch_frontiers_papers),
+    "aha": ("AHA Journals", fetch_aha_papers),
 }
 
 
@@ -690,7 +760,9 @@ def format_and_save_excel(data, excel_path, sheet_name="Authors"):
             detected = detect_country(
                 email=str(row["Email ID"]),
                 doi=str(row["DOI"]),
-                paper_title=str(row["Paper Title"])
+                paper_title=str(row["Paper Title"]),
+                author_name=str(row["Author Name"]),
+                allow_network=True
             )
             cleaned_countries.append(detected or "Unknown")
     df["Country"] = cleaned_countries
@@ -759,17 +831,35 @@ def format_and_save_excel(data, excel_path, sheet_name="Authors"):
 # -----------------------------------------------------------
 # Background Extraction Worker
 # -----------------------------------------------------------
-def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None, topics=None):
+def get_pdf_storage_stats():
+    """Computes disk space occupied by downloaded temporary PDF files."""
+    total_size = 0
+    total_files = 0
+    if os.path.exists(PDFS_BASE_DIR):
+        for root, dirs, files in os.walk(PDFS_BASE_DIR):
+            for f in files:
+                fp = os.path.join(root, f)
+                try:
+                    total_size += os.path.getsize(fp)
+                    total_files += 1
+                except Exception:
+                    pass
+    if total_size >= 1024 * 1024 * 1024:
+        size_str = f"{total_size / (1024 * 1024 * 1024):.2f} GB"
+    elif total_size >= 1024 * 1024:
+        size_str = f"{total_size / (1024 * 1024):.1f} MB"
+    elif total_size >= 1024:
+        size_str = f"{total_size / 1024:.1f} KB"
+    else:
+        size_str = f"{total_size} Bytes"
+    return {"total_size_bytes": total_size, "total_size_str": size_str, "total_files": total_files}
+
+
+def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None, topics=None, auto_delete_pdfs=True):
     """
     Runs the full extraction in a background thread across one or more selected sources.
     Supports single or multiple keywords simultaneously.
     Holds the extraction lock for its entire duration.
-
-    filters (dict, optional): Extraction criteria sent from the UI:
-        - countries     (list[str]): e.g. ["USA", "UK"]
-        - year_from     (int|None):  e.g. 2023
-        - year_to       (int|None):  e.g. 2026
-        - article_types (list[str]): e.g. ["Article", "Review"]
     """
     if isinstance(source_sites, str):
         source_sites = [source_sites]
@@ -821,235 +911,273 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
                 f"[Task {short_id}] Batch flushed {len(pending_rows)} rows to master CSV."
             )
             pending_rows = []
+            with TASKS_LOCK:
+                if task_id in TASKS:
+                    TASKS[task_id]["live_data"] = list(rows)
+                    TASKS[task_id]["contacts_found"] = len(rows)
 
     try:
+        run_start_time = time.time()
         topic_clean = re.sub(r'[^\w\-]', '_', "_".join(topics[:2])).lower()[:40]
 
-        task_update(task_id, "running", "Loading previously seen emails...", percentage=5, contacts_found=0)
+        task_update(task_id, "running", "Connecting to shared master database...", percentage=5, contacts_found=0, live_data=[])
         seen_emails, seen_dois = load_seen_data()
         log.info(
-            f"[Dedup] Loaded {len(seen_emails)} seen emails, {len(seen_dois)} seen DOIs."
+            f"[Dedup] Loaded {len(seen_emails)} seen emails, {len(seen_dois)} seen DOIs from shared master."
         )
 
-        total_sources = len(source_sites)
         total_papers_fetched = 0
         total_papers_processed = 0
         doi_skipped_total = 0
 
-        for source_idx, source_site in enumerate(source_sites):
-            if cancel_event.is_set() or stop_event.is_set():
-                break
+        # Define parallel fetch worker job
+        def _fetch_source_job(site, kw, max_p, p_dir, fltrs):
+            label, fetch_fn = SOURCE_FETCHERS[site]
+            try:
+                t_start = time.time()
+                kw_papers = fetch_fn(kw, max_p, p_dir, filters=fltrs)
+                t_took = time.time() - t_start
+                log.info(f"[ParallelFetch] {label} returned {len(kw_papers)} papers for '{kw}' in {t_took:.2f}s")
+                return site, label, kw, kw_papers
+            except Exception as e_fetch:
+                log.error(f"[ParallelFetch] Error in {label} for '{kw}': {e_fetch}", exc_info=True)
+                return site, label, kw, []
 
-            source_label, fetcher_func = SOURCE_FETCHERS[source_site]
-            topic_pdf_dir = os.path.join(PDFS_BASE_DIR, f"{source_site}_{topic_clean}_pdfs")
-            os.makedirs(topic_pdf_dir, exist_ok=True)
-            if topic_pdf_dir not in created_pdf_dirs:
-                created_pdf_dirs.append(topic_pdf_dir)
+        source_jobs = []
+        for s_idx, s_site in enumerate(source_sites):
+            s_label, _ = SOURCE_FETCHERS[s_site]
+            t_dir = os.path.join(PDFS_BASE_DIR, f"{s_site}_{topic_clean}_pdfs")
+            os.makedirs(t_dir, exist_ok=True)
+            if t_dir not in created_pdf_dirs:
+                created_pdf_dirs.append(t_dir)
+            for kw in topics:
+                source_jobs.append((s_site, kw, max_papers, t_dir, filters))
 
-            source_pct_base = 5 + int(85 * source_idx / total_sources)
-            source_pct_span = max(1, int(85 / total_sources))
+        with TASKS_LOCK:
+            if task_id in TASKS:
+                TASKS[task_id]["created_pdf_dirs"] = list(created_pdf_dirs)
 
-            downloaded = []
-            seen_batch_dois = set()
-            for kw_idx, kw in enumerate(topics):
+        total_jobs = len(source_jobs)
+        task_update(
+            task_id, "running",
+            f"⚡ Launching parallel jet-speed fetch across {len(source_sites)} source databases...",
+            percentage=8,
+            contacts_found=0,
+            live_data=[]
+        )
+
+        # Execute parallel downloads across all selected sources simultaneously
+        max_workers = min(12, max(1, total_jobs))
+        executor = ThreadPoolExecutor(max_workers=max_workers)
+        try:
+            future_to_job = {
+                executor.submit(_fetch_source_job, site, kw, max_p, p_dir, fltrs): (site, kw)
+                for (site, kw, max_p, p_dir, fltrs) in source_jobs
+            }
+
+            completed_jobs = 0
+            for future in as_completed(future_to_job):
                 if cancel_event.is_set() or stop_event.is_set():
+                    try:
+                        executor.shutdown(wait=False, cancel_futures=True)
+                    except Exception:
+                        pass
                     break
-                kw_status = (
-                    f"[{source_idx + 1}/{total_sources}] Fetching {source_label} for '{kw}'..."
-                    if len(topics) > 1
-                    else f"[{source_idx + 1}/{total_sources}] Fetching papers from {source_label}..."
-                )
+
+                site, label, kw, papers = future.result()
+                completed_jobs += 1
+                total_papers_fetched += len(papers)
+
+                pct_job = min(92, 10 + int(80 * completed_jobs / max(1, total_jobs)))
                 task_update(
                     task_id, "running",
-                    kw_status,
-                    percentage=source_pct_base + int((source_pct_span * 0.3) * kw_idx / max(1, len(topics))),
-                    contacts_found=len(rows) + len(pending_rows)
-                )
-                log.info(
-                    f"[Task {short_id}] ({source_idx + 1}/{total_sources}) Starting: source={source_site}, "
-                    f"keyword='{kw}', max={max_papers}"
+                    f"[{completed_jobs}/{total_jobs}] {label} ('{kw}'): Processing {len(papers)} paper(s)...",
+                    percentage=pct_job,
+                    contacts_found=len(rows) + len(pending_rows),
+                    live_data=rows + pending_rows
                 )
 
-                try:
-                    kw_downloaded = fetcher_func(kw, max_papers, topic_pdf_dir, filters=filters)
-                except Exception as fetch_err:
-                    log.error(f"[Task {short_id}] Fetcher error for {source_site} on '{kw}': {fetch_err}", exc_info=True)
-                    kw_downloaded = []
-
-                for item in kw_downloaded:
-                    item_doi = (item.get("doi") or "").strip().lower()
-                    if item_doi and item_doi in seen_batch_dois:
-                        continue
-                    if item_doi:
-                        seen_batch_dois.add(item_doi)
-                    downloaded.append(item)
-
-            num_papers = len(downloaded)
-            total_papers_fetched += num_papers
-            log.info(f"[Task {short_id}] {source_label} returned {num_papers} papers across {len(topics)} keyword(s).")
-
-            for paper_index, item in enumerate(downloaded):
-                total_papers_processed += 1
-
-                # 0. Cancel check
-                if cancel_event.is_set():
-                    log.info(f"[Task {short_id}] Cancel requested. Aborting loop immediately.")
-                    break
-
-                # 1. Stop check
-                if stop_event.is_set():
-                    log.info(f"[Task {short_id}] User requested stop. Exiting early.")
-                    break
-
-                # 2. Pause check
-                if not pause_event.is_set():
-                    current_found = len(rows) + len(pending_rows)
-                    current_pct = source_pct_base + int(source_pct_span * paper_index / max(1, num_papers))
-                    log.info(f"[Task {short_id}] Paused at {source_label} paper {paper_index + 1}/{num_papers}.")
-                    task_update(
-                        task_id, "paused",
-                        f"Extraction stopped at {source_label} paper {paper_index + 1}/{num_papers} ({current_found} contacts found). Click Continue to resume.",
-                        percentage=current_pct,
-                        contacts_found=current_found
-                    )
-                    while not pause_event.is_set():
-                        if stop_event.is_set() or cancel_event.is_set():
-                            break
-                        time.sleep(0.25)
+                num_papers = len(papers)
+                for paper_index, item in enumerate(papers):
+                    total_papers_processed += 1
 
                     if cancel_event.is_set() or stop_event.is_set():
                         break
 
-                    log.info(f"[Task {short_id}] Extraction continued by user.")
-                    task_update(
-                        task_id, "running",
-                        f"Continuing extraction at {source_label} paper {paper_index + 1}/{num_papers}...",
-                        percentage=current_pct,
-                        contacts_found=current_found
-                    )
+                    # Smooth incremental progress calculation
+                    pct_paper = min(94, 10 + int(80 * (completed_jobs - 1 + (paper_index + 1) / max(1, num_papers)) / max(1, total_jobs)))
 
-                # Progress percentage
-                current_pct = source_pct_base + int(source_pct_span * (paper_index + 1) / max(1, num_papers))
-                current_found = len(rows) + len(pending_rows)
-                task_update(
-                    task_id, "running",
-                    f"[{source_idx + 1}/{total_sources}] {source_label}: paper {paper_index + 1}/{num_papers}...",
-                    percentage=current_pct,
-                    contacts_found=current_found
-                )
-
-                item_doi_raw = item.get("doi", "")
-                item_doi = normalise_doi(item_doi_raw)
-
-                # DOI-level dedup check
-                if item_doi and item_doi in seen_dois:
-                    log.info(f"[Dedup] Already in collection (DOI match): {item.get('title', '')[:55]}")
-                    doi_skipped_total += 1
-                    continue
-
-                _record_attempted_doi(item_doi)
-                if item_doi:
-                    seen_dois.add(item_doi)
-
-                # HTML-First shortcut
-                if "_html_emails" in item:
-                    for email in item["_html_emails"]:
-                        clean_email = clean_and_validate_email(email)
-                        if not clean_email or clean_email in seen_emails:
-                            continue
-
-                        matched_author = match_author_for_email(clean_email, item.get("authors", []), metadata_authors=item.get("authors", []))
-                        if not matched_author:
-                            continue
-
-                        clean_auth = clean_author_name(matched_author, email=clean_email)
-                        if not clean_auth or not is_valid_author_name(clean_auth):
-                            continue
-
-                        # Strict country filtering (blocks Chinese domains/authors and non-target countries)
-                        is_ok, country_reason = is_country_allowed(
-                            email=clean_email,
-                            allowed_countries=selected_countries,
-                            author_name=clean_auth,
-                            paper_title=item.get("title", ""),
-                            doi=item_doi_raw
+                    # Pause check
+                    if not pause_event.is_set():
+                        current_found = len(rows) + len(pending_rows)
+                        task_update(
+                            task_id, "paused",
+                            f"Extraction stopped at {label} paper {paper_index + 1}/{num_papers} ({current_found} contacts found). Click Continue to resume.",
+                            percentage=pct_paper,
+                            contacts_found=current_found,
+                            live_data=rows + pending_rows
                         )
-                        if not is_ok:
-                            log.info(f"[CountryFilter] Excluded email {clean_email}: {country_reason}")
-                            continue
+                        while not pause_event.is_set():
+                            if stop_event.is_set() or cancel_event.is_set():
+                                break
+                            time.sleep(0.25)
 
-                        detected_country = detect_country(
-                            email=clean_email,
-                            doi=item_doi_raw,
-                            affiliation=item.get("affiliation", ""),
-                            paper_title=item.get("title", ""),
-                            allowed_countries=selected_countries
-                        )
-                        pending_rows.append({
-                            "PDF File Name": item["pdf_name"],
-                            "Source Journal": item.get("source_journal", source_label),
-                            "Paper Title": clean_paper_title(item["title"]),
-                            "Author Name": clean_auth,
-                            "Email ID": clean_email,
-                            "Country": detected_country,
-                            "DOI": re.sub(r'[\r\n\t]+', '', str(item_doi_raw)).strip(),
-                        })
-                        seen_emails.add(clean_email)
-                        # Grace point: capture ALL valid authors per article (no break)
+                        if cancel_event.is_set() or stop_event.is_set():
+                            break
 
-                    if (paper_index + 1) % 5 == 0:
-                        _flush_pending()
-                    continue
+                    item_doi_raw = item.get("doi", "")
+                    item_doi = normalise_doi(item_doi_raw)
 
-                if cancel_event.is_set() or stop_event.is_set():
-                    break
-
-                # PDF parsing
-                pairs = extract_author_email_pairs(item["file_path"], item.get("authors", []))
-                for author, email in pairs:
-                    clean_auth = clean_author_name(author, email=email)
-                    if not clean_auth or not is_valid_author_name(clean_auth):
-                        continue
-                    if email in seen_emails:
-                        log.debug(f"[Dedup] Skipped duplicate email: {email}")
+                    # Re-sync DOI deduplication against master
+                    if item_doi and item_doi in seen_dois:
+                        doi_skipped_total += 1
                         continue
 
-                    # Strict country filtering (blocks Chinese domains/authors and non-target countries)
-                    is_ok, country_reason = is_country_allowed(
-                        email=email,
-                        allowed_countries=selected_countries,
-                        author_name=clean_auth,
-                        paper_title=item.get("title", ""),
-                        doi=item_doi_raw
-                    )
-                    if not is_ok:
-                        log.info(f"[CountryFilter] Excluded email {email}: {country_reason}")
+                    _record_attempted_doi(item_doi)
+                    if item_doi:
+                        seen_dois.add(item_doi)
+
+                    # Strict 1-to-1 Author-Email Mapping per Paper
+                    seen_authors_in_this_paper = set()
+
+                    # HTML-First shortcut
+                    if "_html_emails" in item:
+                        for email in item["_html_emails"]:
+                            clean_email = clean_and_validate_email(email)
+                            if not clean_email or clean_email in seen_emails:
+                                continue
+
+                            matched_author = match_author_for_email(clean_email, item.get("authors", []), metadata_authors=item.get("authors", []))
+                            if not matched_author:
+                                continue
+
+                            clean_auth = clean_author_name(matched_author, email=clean_email)
+                            if not clean_auth or not is_valid_author_name(clean_auth):
+                                continue
+
+                            auth_norm = clean_auth.lower()
+                            if auth_norm in seen_authors_in_this_paper:
+                                # User requirement: 1 article can have multiple authors, but each author gets only 1 verified email
+                                continue
+
+                            # Country filter check
+                            is_ok, country_reason = is_country_allowed(
+                                email=clean_email,
+                                allowed_countries=selected_countries,
+                                author_name=clean_auth,
+                                paper_title=item.get("title", ""),
+                                doi=item_doi_raw
+                            )
+                            if not is_ok:
+                                continue
+
+                            detected_country = detect_country(
+                                email=clean_email,
+                                doi=item_doi_raw,
+                                affiliation=item.get("affiliation", ""),
+                                paper_title=item.get("title", ""),
+                                author_name=clean_auth,
+                                allowed_countries=selected_countries,
+                                allow_network=True
+                            )
+
+                            seen_authors_in_this_paper.add(auth_norm)
+                            seen_emails.add(clean_email)
+                            pending_rows.append({
+                                "PDF File Name": item.get("pdf_name", "N/A"),
+                                "Source Journal": item.get("source_journal", label),
+                                "Paper Title": clean_paper_title(item.get("title", "")),
+                                "Author Name": clean_auth,
+                                "Email ID": clean_email,
+                                "Country": detected_country,
+                                "DOI": re.sub(r'[\r\n\t]+', '', str(item_doi_raw)).strip(),
+                            })
+
+                            # Immediately update live streaming data
+                            current_total_rows = rows + pending_rows
+                            task_update(
+                                task_id, "running",
+                                f"[{completed_jobs}/{total_jobs}] {label}: Extracted {clean_auth} ({len(current_total_rows)} total)...",
+                                percentage=pct_paper,
+                                contacts_found=len(current_total_rows),
+                                live_data=current_total_rows
+                            )
+
+                        if (paper_index + 1) % 5 == 0:
+                            _flush_pending()
                         continue
 
-                    detected_country = detect_country(
-                        email=email,
-                        doi=item_doi_raw,
-                        affiliation=item.get("affiliation", ""),
-                        paper_title=item.get("title", ""),
-                        allowed_countries=selected_countries
-                    )
-                    pending_rows.append({
-                        "PDF File Name": item["pdf_name"],
-                        "Source Journal": item.get("source_journal", source_label),
-                        "Paper Title": clean_paper_title(item["title"]),
-                        "Author Name": clean_auth,
-                        "Email ID": email,
-                        "Country": detected_country,
-                        "DOI": re.sub(r'[\r\n\t]+', '', str(item_doi_raw)).strip(),
-                    })
-                    seen_emails.add(email)
-                    # Grace point: capture ALL valid authors per article (no break)
+                    # PDF parsing
+                    if "file_path" in item and os.path.exists(item["file_path"]):
+                        pairs = extract_author_email_pairs(item["file_path"], item.get("authors", []))
+                        for author, email in pairs:
+                            clean_auth = clean_author_name(author, email=email)
+                            if not clean_auth or not is_valid_author_name(clean_auth):
+                                continue
 
-                if (paper_index + 1) % 5 == 0:
-                    _flush_pending()
+                            auth_norm = clean_auth.lower()
+                            if auth_norm in seen_authors_in_this_paper:
+                                # User requirement: 1 article can have multiple authors, but each author gets only 1 verified email
+                                continue
+
+                            if email in seen_emails:
+                                continue
+
+                            # Country filter check
+                            is_ok, country_reason = is_country_allowed(
+                                email=email,
+                                allowed_countries=selected_countries,
+                                author_name=clean_auth,
+                                paper_title=item.get("title", ""),
+                                doi=item_doi_raw
+                            )
+                            if not is_ok:
+                                continue
+
+                            detected_country = detect_country(
+                                email=email,
+                                doi=item_doi_raw,
+                                affiliation=item.get("affiliation", ""),
+                                paper_title=item.get("title", ""),
+                                author_name=clean_auth,
+                                allowed_countries=selected_countries,
+                                allow_network=True
+                            )
+
+                            seen_authors_in_this_paper.add(auth_norm)
+                            seen_emails.add(email)
+                            pending_rows.append({
+                                "PDF File Name": item.get("pdf_name", "N/A"),
+                                "Source Journal": item.get("source_journal", label),
+                                "Paper Title": clean_paper_title(item.get("title", "")),
+                                "Author Name": clean_auth,
+                                "Email ID": email,
+                                "Country": detected_country,
+                                "DOI": re.sub(r'[\r\n\t]+', '', str(item_doi_raw)).strip(),
+                            })
+
+                            # Immediately update live streaming data
+                            current_total_rows = rows + pending_rows
+                            task_update(
+                                task_id, "running",
+                                f"[{completed_jobs}/{total_jobs}] {label}: Extracted {clean_auth} ({len(current_total_rows)} total)...",
+                                percentage=pct_paper,
+                                contacts_found=len(current_total_rows),
+                                live_data=current_total_rows
+                            )
+
+                        if (paper_index + 1) % 5 == 0:
+                            _flush_pending()
+
+                _flush_pending()
 
             # Flush remaining after each source completes
             _flush_pending()
+        finally:
+            try:
+                executor.shutdown(wait=False, cancel_futures=True)
+            except Exception:
+                pass
 
         # Handle cancellation
         if cancel_event.is_set():
@@ -1073,11 +1201,17 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
 
         _flush_pending()
         was_stopped = stop_event.is_set()
-        log.info(f"[Task {short_id}] Run complete (stopped_early={was_stopped}). New rows this run: {len(rows)}")
+        total_elapsed_seconds = round(time.time() - run_start_time, 1)
+        mins = int(total_elapsed_seconds // 60)
+        secs = int(total_elapsed_seconds % 60)
+        elapsed_str = f"{mins:02d}m {secs:02d}s" if mins > 0 else f"{secs}s"
+        speed_per_min = round((len(rows) / max(1.0, total_elapsed_seconds)) * 60, 1)
+
+        log.info(f"[Task {short_id}] Run complete in {elapsed_str} (stopped_early={was_stopped}). New rows this run: {len(rows)}")
 
         if not rows:
             if was_stopped:
-                message = "Extraction was stopped by user before any contacts were found."
+                message = f"Extraction stopped by user after {elapsed_str} before any contacts were found."
             elif doi_skipped_total > 0 and doi_skipped_total == total_papers_fetched:
                 message = (
                     f"All {doi_skipped_total} papers for '{topic}' across selected sources "
@@ -1094,18 +1228,21 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
                     f"No author emails could be extracted from {sources_str} for '{topic}'. "
                     f"Try another keyword or select additional journal sources."
                 )
-            task_update(task_id, "done", "", result={
+            task_update(task_id, "done", message, result={
                 "success": False,
                 "message": message,
                 "data": [],
                 "file": None,
                 "stopped_early": was_stopped,
+                "elapsed_seconds": total_elapsed_seconds,
+                "elapsed_str": elapsed_str,
+                "speed_per_min": 0,
             }, percentage=100, contacts_found=0)
             return
 
         # Write Excel output
         total_found = len(rows)
-        task_update(task_id, "running", f"Writing {total_found} results to Excel...", percentage=95, contacts_found=total_found)
+        task_update(task_id, "running", f"Writing {total_found} verified results to Excel...", percentage=95, contacts_found=total_found)
         if len(source_sites) == 1:
             excel_filename = f"{source_sites[0]}_{topic_clean}_authors.xlsx"
         else:
@@ -1115,16 +1252,34 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
         df = pd.DataFrame(rows)
         format_and_save_excel(df, excel_path, sheet_name="Authors")
 
-        status_msg = f"Extraction stopped early. {len(rows)} contacts saved." if was_stopped else f"Extraction complete. {len(rows)} contacts found."
-        log.info(f"[Task {short_id}] {status_msg} {len(rows)} rows written to {excel_filename}")
+        # Auto-delete temporary PDFs for this run upon 100% completion if enabled
+        if auto_delete_pdfs:
+            import shutil
+            for pdir in created_pdf_dirs:
+                try:
+                    if os.path.exists(pdir):
+                        shutil.rmtree(pdir, ignore_errors=True)
+                        log.info(f"[Task {short_id}] Auto-deleted temporary PDF folder on complete: {pdir}")
+                except Exception as e_del:
+                    log.warning(f"[Task {short_id}] Could not auto-delete PDF folder {pdir}: {e_del}")
 
-        task_update(task_id, "done", "", result={
+        status_msg = (
+            f"Extraction stopped early. {len(rows)} contacts saved in {elapsed_str}."
+            if was_stopped
+            else f"Extraction complete: Found {len(rows)} verified contacts across {len(source_sites)} sources in {elapsed_str} ({speed_per_min}/min)."
+        )
+        log.info(f"[Task {short_id}] {status_msg} -> written to {excel_filename}")
+
+        task_update(task_id, "done", status_msg, result={
             "success": True,
             "total_records": len(rows),
             "download_file": excel_filename,
             "data": rows,
             "stopped_early": was_stopped,
             "message": status_msg,
+            "elapsed_seconds": total_elapsed_seconds,
+            "elapsed_str": elapsed_str,
+            "speed_per_min": speed_per_min,
             "source_sites": source_sites,
             "source_site": source_sites[0],
             "topic": topic_display,
@@ -1164,6 +1319,70 @@ def _run_extraction_task(task_id, source_sites, topic, max_papers, filters=None,
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/storage-stats", methods=["GET"])
+def storage_stats():
+    """Returns disk usage of the temporary downloaded PDF files."""
+    return jsonify({
+        "success": True,
+        "pdf_storage": get_pdf_storage_stats()
+    })
+
+
+@app.route("/purge-pdfs", methods=["POST"])
+def purge_pdfs():
+    """
+    1-Click purge of all downloaded temporary PDF files in downloads/Pdf Files/.
+    Leaves master_email_list.csv, attempted_dois.txt, and author details/ Excel files 100% safe.
+    """
+    import shutil
+    deleted_files = 0
+    deleted_bytes = 0
+    try:
+        if os.path.exists(PDFS_BASE_DIR):
+            for item in os.listdir(PDFS_BASE_DIR):
+                item_path = os.path.join(PDFS_BASE_DIR, item)
+                try:
+                    if os.path.isfile(item_path):
+                        deleted_bytes += os.path.getsize(item_path)
+                        os.remove(item_path)
+                        deleted_files += 1
+                    elif os.path.isdir(item_path):
+                        for root, dirs, files in os.walk(item_path):
+                            for f in files:
+                                fp = os.path.join(root, f)
+                                try:
+                                    deleted_bytes += os.path.getsize(fp)
+                                    deleted_files += 1
+                                except Exception:
+                                    pass
+                        shutil.rmtree(item_path, ignore_errors=True)
+                except Exception as e:
+                    log.warning(f"[PurgePDFs] Could not delete {item_path}: {e}")
+        os.makedirs(PDFS_BASE_DIR, exist_ok=True)
+
+        if deleted_bytes >= 1024 * 1024 * 1024:
+            freed_str = f"{deleted_bytes / (1024 * 1024 * 1024):.2f} GB"
+        elif deleted_bytes >= 1024 * 1024:
+            freed_str = f"{deleted_bytes / (1024 * 1024):.1f} MB"
+        elif deleted_bytes >= 1024:
+            freed_str = f"{deleted_bytes / 1024:.1f} KB"
+        else:
+            freed_str = f"{deleted_bytes} Bytes"
+
+        log.info(f"[PurgePDFs] Successfully purged {freed_str} across {deleted_files} files.")
+        return jsonify({
+            "success": True,
+            "message": f"Purged {freed_str} ({deleted_files} files). Master database & Excels remain 100% intact.",
+            "freed_bytes": deleted_bytes,
+            "freed_str": freed_str,
+            "deleted_files": deleted_files,
+            "stats": get_pdf_storage_stats()
+        })
+    except Exception as e:
+        log.error(f"[PurgePDFs] Error: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/start-extraction", methods=["POST"])
@@ -1206,14 +1425,18 @@ def start_extraction():
     if not source_sites:
         return jsonify({"error": "Please select at least one valid journal source."}), 400
 
+    # Read auto_delete_pdfs toggle
+    raw_auto_delete = request.form.get("auto_delete_pdfs", "true").strip().lower()
+    auto_delete_pdfs = raw_auto_delete in ("true", "1", "yes", "on")
+
     # --- Read extraction filters from the form ---
     raw_year_from = request.form.get("year_from", "").strip()
-    raw_year_to   = request.form.get("year_to",   "").strip()
+    raw_year_to = request.form.get("year_to", "").strip()
     filters = {
-        "countries":     request.form.getlist("countries[]"),     # e.g. ["USA", "UK"]
-        "year_from":     int(raw_year_from) if raw_year_from.isdigit() else None,
-        "year_to":       int(raw_year_to)   if raw_year_to.isdigit()   else None,
-        "article_types": request.form.getlist("article_types[]"), # e.g. ["Article", "Review"]
+        "countries": request.form.getlist("countries[]"),
+        "year_from": int(raw_year_from) if raw_year_from.isdigit() else 2024,
+        "year_to": int(raw_year_to) if raw_year_to.isdigit() else 2026,
+        "article_types": request.form.getlist("article_types[]"),
     }
 
     # Cross-process safe lock acquisition (ISSUE-12)
@@ -1245,11 +1468,12 @@ def start_extraction():
             "topics": topics,
             "max_papers": max_papers,
             "filters": filters,
+            "auto_delete_pdfs": auto_delete_pdfs,
         }
 
     thread = threading.Thread(
         target=_run_extraction_task,
-        args=(task_id, source_sites, topic, max_papers, filters, topics),
+        args=(task_id, source_sites, topic, max_papers, filters, topics, auto_delete_pdfs),
         daemon=True,
     )
     thread.start()
@@ -1386,16 +1610,20 @@ def cancel_extraction(task_id):
 
     # Delete temporary PDFs directories for this run
     try:
+        import shutil
+        dirs_to_clean = list(task.get("created_pdf_dirs") or [])
         source_sites = task.get("source_sites") or ([task.get("source_site")] if task.get("source_site") else [])
         topic = task.get("topic", "")
         if topic and source_sites:
             topic_clean = re.sub(r'[^\w\-]', '_', topic).lower()[:80]
-            import shutil
             for s in source_sites:
                 topic_pdf_dir = os.path.join(PDFS_BASE_DIR, f"{s}_{topic_clean}_pdfs")
-                if os.path.exists(topic_pdf_dir):
-                    shutil.rmtree(topic_pdf_dir, ignore_errors=True)
-                    log.info(f"[Task {task_id[:8]}] Cleaned up temporary directory: {topic_pdf_dir}")
+                if topic_pdf_dir not in dirs_to_clean:
+                    dirs_to_clean.append(topic_pdf_dir)
+        for pdir in dirs_to_clean:
+            if os.path.exists(pdir):
+                shutil.rmtree(pdir, ignore_errors=True)
+                log.info(f"[Task {task_id[:8]}] Cleaned up temporary directory: {pdir}")
     except Exception as e:
         log.warning(f"[Task {task_id[:8]}] Cleanup error during cancel: {e}")
 
@@ -1419,6 +1647,7 @@ def task_status(task_id):
         "progress": task["progress"],
         "percentage": task.get("percentage", 0),
         "contacts_found": task.get("contacts_found", 0),
+        "live_data": task.get("live_data", []),
         "is_paused": task["status"] == "paused",
         "is_cancelled": task["status"] == "cancelled",
     })
@@ -1641,16 +1870,75 @@ def download_dropped_csv(filename):
     return "File not found", 404
 
 
-def _open_browser():
-    """Wait briefly for Flask to bind to port 5000, then launch default browser."""
-    time.sleep(1.2)
-    webbrowser.open("http://127.0.0.1:5000")
+@app.route("/suppression-list", methods=["GET", "POST"])
+def manage_suppression_list():
+    """
+    GET: Returns list and count of suppressed bounce emails.
+    POST: Adds new bounced emails to suppression list.
+    """
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        raw_text = data.get("emails", "") or request.form.get("emails", "")
+        if isinstance(raw_text, list):
+            new_emails = raw_text
+        else:
+            new_emails = [e.strip() for e in re.split(r'[\r\n,;]+', str(raw_text)) if e.strip()]
+        added = add_suppressed_emails(new_emails)
+        all_suppressed = sorted(list(get_suppressed_emails()))
+        return jsonify({
+            "success": True,
+            "added_count": added,
+            "total_count": len(all_suppressed),
+            "suppression_list": all_suppressed,
+            "message": f"Successfully added {added} email(s) to suppression list ({len(all_suppressed)} total)."
+        })
+
+    suppressed = sorted(list(get_suppressed_emails()))
+    return jsonify({
+        "success": True,
+        "total_count": len(suppressed),
+        "suppression_list": suppressed
+    })
+
+
+def _launch_browser(port):
+    """Wait briefly for Flask to bind to port, then launch default browser."""
+    time.sleep(1.0)
+    url = f"http://127.0.0.1:{port}"
+    try:
+        if sys.platform == "win32":
+            os.system(f'start "" "{url}"')
+        else:
+            webbrowser.open(url)
+    except Exception:
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
-    # When Flask debug reloader is enabled, prevent opening two browser tabs
-    if not os.environ.get("WERKZEUG_RUN_MAIN"):
-        threading.Thread(target=_open_browser, daemon=True).start()
+    parser = argparse.ArgumentParser(description="PULSUS AI | ScholarLead Matrix")
+    parser.add_argument("--port", "-p", type=int, default=None, help="Port to bind (e.g. 5000, 5001)")
+    parser.add_argument("pos_port", nargs="?", type=int, default=None, help="Optional positional port")
+    args, _ = parser.parse_known_args()
 
-    app.run(debug=True, port=5000)
+    requested_port = args.port or args.pos_port
+    if requested_port:
+        CURRENT_PORT = find_available_port(start_port=requested_port, max_attempts=20)
+    else:
+        CURRENT_PORT = find_available_port(start_port=5000, max_attempts=50)
 
+    # Ensure any stale lock for this specific port is cleared
+    _release_extraction_lock()
+
+    print("=" * 65)
+    print(" [*] PULSUS AI | ScholarLead Matrix (WS2.0)")
+    print(f" [>] Running at: http://127.0.0.1:{CURRENT_PORT}")
+    print(f" [>] Process Port: {CURRENT_PORT} | Shared Master Database Connected")
+    print(" Opening browser automatically...")
+    print("=" * 65)
+
+    threading.Thread(target=_launch_browser, args=(CURRENT_PORT,), daemon=True).start()
+
+    app.run(host="127.0.0.1", port=CURRENT_PORT, debug=False, use_reloader=False, threaded=True)

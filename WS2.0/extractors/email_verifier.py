@@ -1,7 +1,7 @@
+import os
 import html
 import re
 import smtplib
-import socket
 import threading
 import logging
 import requests
@@ -13,6 +13,10 @@ log = logging.getLogger("extraction.verifier")
 _DOMAIN_CACHE = {}  # domain -> bool (True if domain has valid MX/A records, False if NXDOMAIN)
 _EMAIL_CACHE = {}   # email -> (status, reason)
 _CACHE_LOCK = threading.Lock()
+
+_SUPPRESSION_CACHE = set()
+_SUPPRESSION_FILE_MTIME = 0
+_SUPPRESSION_LOCK = threading.Lock()
 
 # Common disposable & temporary email services
 DISPOSABLE_DOMAINS = frozenset({
@@ -45,10 +49,89 @@ GENERIC_ROLE_PREFIXES = frozenset({
     "manuscript", "journal", "service", "billing", "marketing", "careers"
 })
 
+PUBLISHING_PREFIX_PATTERN = re.compile(
+    r'^(?:10\.\d{4,9}[._\-/](?:[a-zA-Z0-9_-]+[._\-/])*|(?:manuscript|article|paper|author|authors|correspondence|corresponding|contact|editor|editorial|doi|dr|prof|to|from|re|fw|email|mail|e-mail)[._\-]+)',
+    re.IGNORECASE
+)
+
+
+def get_suppression_file_path():
+    """Returns absolute path to the bounced suppression list file."""
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    supp_path = os.path.join(base_dir, "downloads", "bounced_suppression_list.txt")
+    if not os.path.exists(os.path.dirname(supp_path)):
+        os.makedirs(os.path.dirname(supp_path), exist_ok=True)
+    if not os.path.exists(supp_path):
+        try:
+            with open(supp_path, "w", encoding="utf-8") as f:
+                f.write("# Master Bounce Suppression List\n# Any email in this list will be permanently suppressed and dropped across all scrapers & verifiers.\n")
+        except Exception:
+            pass
+    return supp_path
+
+
+def get_suppressed_emails():
+    """Returns set of lowercased suppressed emails loaded from file."""
+    global _SUPPRESSION_CACHE, _SUPPRESSION_FILE_MTIME
+    supp_path = get_suppression_file_path()
+    try:
+        if os.path.exists(supp_path):
+            mtime = os.path.getmtime(supp_path)
+            with _SUPPRESSION_LOCK:
+                if mtime != _SUPPRESSION_FILE_MTIME:
+                    emails = set()
+                    with open(supp_path, "r", encoding="utf-8", errors="ignore") as f:
+                        for line in f:
+                            line = line.strip().lower()
+                            if line and not line.startswith("#") and "@" in line:
+                                emails.add(line)
+                    _SUPPRESSION_CACHE = emails
+                    _SUPPRESSION_FILE_MTIME = mtime
+                return set(_SUPPRESSION_CACHE)
+    except Exception as e:
+        log.warning(f"Error reading suppression list: {e}")
+    with _SUPPRESSION_LOCK:
+        return set(_SUPPRESSION_CACHE)
+
+
+def add_suppressed_emails(new_emails):
+    """Appends new emails to the suppression list file and updates cache."""
+    global _SUPPRESSION_FILE_MTIME
+    supp_path = get_suppression_file_path()
+    existing = get_suppressed_emails()
+    to_add = []
+    if isinstance(new_emails, str):
+        new_emails = [new_emails]
+    for em in new_emails:
+        cleaned = clean_and_repair_email(em) or em.strip().lower()
+        if cleaned and "@" in cleaned and cleaned not in existing:
+            to_add.append(cleaned)
+            existing.add(cleaned)
+    if to_add:
+        try:
+            with open(supp_path, "a", encoding="utf-8") as f:
+                for item in to_add:
+                    f.write(f"{item}\n")
+            with _SUPPRESSION_LOCK:
+                _SUPPRESSION_CACHE.update(to_add)
+                _SUPPRESSION_FILE_MTIME = os.path.getmtime(supp_path)
+        except Exception as e:
+            log.warning(f"Error writing to suppression list: {e}")
+    return len(to_add)
+
+
+def is_suppressed_email(email):
+    """Returns True if the email is in the master bounce suppression list."""
+    if not email or not isinstance(email, str):
+        return False
+    em = email.strip().lower()
+    return em in get_suppressed_emails()
+
 
 def clean_and_repair_email(raw_email):
     """
     Intelligently cleans and repairs raw email strings extracted from PDFs and text:
+    - Strips publishing artifact prefixes (e.g. 'manuscript.a.boldt@ucl.ac.uk' -> 'a.boldt@ucl.ac.uk')
     - Strips PDF footnote markers glued to TLD (e.g. '.edu1' -> '.edu', '.org*' -> '.org')
     - Strips Unicode whitespace, control characters, brackets, quotes
     - Returns cleaned lowercase email, or None if invalid.
@@ -65,6 +148,14 @@ def clean_and_repair_email(raw_email):
     local_part, domain = cleaned.split("@", 1)
     local_part = local_part.strip().lower()
     domain = domain.strip().lower()
+
+    # Strip publishing artifact prefixes glued to local part (e.g. manuscript., article., author.)
+    while True:
+        new_local = PUBLISHING_PREFIX_PATTERN.sub('', local_part)
+        if new_local != local_part and len(new_local) >= 2:
+            local_part = new_local
+        else:
+            break
 
     # Repair footnote superscripts stuck to the TLD (e.g., .edu1, .com2, .org*, .ac.uk3)
     # Match patterns like .edu\d+, .com\d+, .org\d+, .gov\d+, .net\d+, .io\d+
@@ -122,8 +213,8 @@ def clean_author_name(raw_author, email=""):
     a = a.replace('\u00a0', ' ').replace('\u200b', '').replace('\ufeff', '')
 
     # 1. Split across explicit newline boundaries
-    lines = [re.sub(r'\s+', ' ', l).strip(' \t\r\n:;,-') for l in re.split(r'[\r\n]+', a)]
-    lines = [l for l in lines if l]
+    lines = [re.sub(r'\s+', ' ', raw_line).strip(' \t\r\n:;,-') for raw_line in re.split(r'[\r\n]+', a)]
+    lines = [clean_l for clean_l in lines if clean_l]
 
     blacklist_exact = {
         'case report', 'case reports', 'case study', 'case studies', 'control study',
@@ -148,8 +239,8 @@ def clean_author_name(raw_author, email=""):
         if tc in blacklist_exact:
             return True
         if any(b in tc for b in [
-            'correspondence', 'case report', 'case study', 'control study', 'all rights',
-            'medical students', 'students', 'inthiswork', 'journal of', 'department of',
+            'case report', 'case study', 'control study', 'all rights reserved',
+            'medical students', 'inthiswork', 'journal of', 'department of',
             'university of', 'faculty of', 'hospital', 'creative commons', 'management research',
             'previousstudiesshow', 'networkarchitecture', 'association', 'consortium'
         ]):
@@ -158,30 +249,37 @@ def clean_author_name(raw_author, email=""):
             return True
         return False
 
-    filtered_lines = [l for l in lines if not is_junk(l)]
+    filtered_lines = [clean_l for clean_l in lines if not is_junk(clean_l)]
     if not filtered_lines:
         filtered_lines = lines
 
     chosen = None
     if email and '@' in email:
         uname = re.sub(r'[^a-z]', '', email.split('@')[0].lower())
-        for l in filtered_lines:
-            words = [re.sub(r'[^a-z]', '', w.lower()) for w in l.split()]
+        for clean_l in filtered_lines:
+            words = [re.sub(r'[^a-z]', '', w.lower()) for w in clean_l.split()]
             words = [w for w in words if len(w) >= 3]
             if any(w in uname for w in words):
-                chosen = l
+                chosen = clean_l
                 break
 
-    if not chosen and filtered_lines:
-        chosen = filtered_lines[-1]
-    elif not chosen and lines:
-        chosen = lines[-1]
-    else:
-        chosen = ""
+    if not chosen:
+        if filtered_lines:
+            chosen = filtered_lines[-1]
+        elif lines:
+            chosen = lines[-1]
+        else:
+            chosen = ""
 
-    # Clean out labels from the chosen line
-    chosen = re.sub(r'^(?:correspondence|corresponding author|author|email|e-mail|dr\.?|prof\.?)\s*[:\-]?\s*', '', chosen, flags=re.IGNORECASE)
-    chosen = re.sub(r'\s*(?:email|e-mail|correspondence|department|university).*$', '', chosen, flags=re.IGNORECASE)
+    # Iteratively strip label/title prefixes from the beginning
+    prev = ""
+    while prev != chosen:
+        prev = chosen
+        chosen = re.sub(r'^(?:correspondence|corresponding author|author|email|e-mail|dr\.?|prof\.?|mr\.?|ms\.?|mrs\.?)\s*[:\-]?\s*', '', chosen, flags=re.IGNORECASE).strip(' \t\r\n,;:-')
+
+    # Clean trailing department/university notes and degrees
+    chosen = re.sub(r'[,;]?\s*(?:email|e-mail|department of|university of|faculty of|hospital of|institute of).*$', '', chosen, flags=re.IGNORECASE)
+    chosen = re.sub(r'\b(?:phd|md|mbbs|msc|bsc|facp|frcp|m\.d\.|ph\.d\.)\b\.?', '', chosen, flags=re.IGNORECASE)
     chosen = re.sub(r'[\d*†‡§#]+', '', chosen)
     chosen = re.sub(r'\s+', ' ', chosen).strip(' \t\r\n,;:-')
 
@@ -191,21 +289,23 @@ def clean_author_name(raw_author, email=""):
         name_parts = chosen.split()
         for i in range(len(name_parts) - 1):
             w1 = re.sub(r'[^a-z]', '', name_parts[i].lower())
-            w2 = re.sub(r'[^a-z]', '', name_parts[i+1].lower())
+            w2 = re.sub(r'[^a-z]', '', name_parts[i + 1].lower())
             if (len(w1) >= 3 and w1 in uname) or (len(w2) >= 3 and w2 in uname):
-                chosen = f"{name_parts[i]} {name_parts[i+1]}"
+                chosen = f"{name_parts[i]} {name_parts[i + 1]}".strip(' \t\r\n,;:-')
                 break
 
-    # If still junk, or abnormally long single word, or empty: derive human name from email username
-    if is_junk(chosen) or len(chosen) < 3 or any(len(w) > 24 for w in chosen.split()):
+    # If still junk, or abnormally long single word, or empty, or sentinels: derive human name from email username
+    if is_junk(chosen) or len(chosen) < 3 or chosen.lower() in ("unknown", "none", "n/a", "na", "null") or any(len(w) > 24 for w in chosen.split()):
         if email and '@' in email:
             uname = email.split('@')[0]
             parts = [p for p in re.split(r'[^a-zA-Z]+', uname) if len(p) >= 2]
             parts = [p.capitalize() for p in parts if p.lower() not in ('dr', 'prof', 'mr', 'ms', 'md', 'phd')]
-            if parts:
+            if len(parts) >= 2:
                 chosen = ' '.join(parts)
+            elif parts and not chosen:
+                chosen = parts[0]
 
-    return chosen
+    return chosen.strip(' \t\r\n,;:-')
 
 
 def is_valid_author_name(name):
@@ -273,6 +373,9 @@ def check_email_deliverability(email, sender_domain="gmail.com", timeout=2.5):
     cleaned = clean_and_repair_email(email)
     if not cleaned:
         return "Undeliverable", "Invalid email syntax"
+
+    if is_suppressed_email(cleaned):
+        return "Undeliverable", "Suppressed: Address known to bounce (NDR record)"
 
     local_part, domain = cleaned.split("@", 1)
 
@@ -745,13 +848,18 @@ ISO_TO_COUNTRY_NAME = {
     "PL": "Poland", "PT": "Portugal", "HU": "Hungary",
     "RO": "Romania", "SA": "Saudi Arabia", "AE": "United Arab Emirates",
     "QA": "Qatar", "KW": "Kuwait", "BH": "Bahrain", "OM": "Oman",
-    "LU": "Luxembourg", "IS": "Iceland",
+    "LU": "Luxembourg", "IS": "Iceland", "EE": "Estonia",
+    "LV": "Latvia", "LT": "Lithuania", "SK": "Slovakia",
+    "SI": "Slovenia", "HR": "Croatia", "BG": "Bulgaria",
+    "RS": "Serbia", "CY": "Cyprus", "MT": "Malta",
     "EG": "Egypt", "CN": "China", "TW": "Taiwan",
     "HK": "Hong Kong", "PK": "Pakistan", "BD": "Bangladesh",
     "RU": "Russia", "IR": "Iran", "MY": "Malaysia",
     "TH": "Thailand", "ID": "Indonesia", "PH": "Philippines",
     "VN": "Vietnam", "NG": "Nigeria", "KE": "Kenya",
-    "GH": "Ghana", "ET": "Ethiopia", "UA": "Ukraine"
+    "GH": "Ghana", "ET": "Ethiopia", "UA": "Ukraine",
+    "JO": "Jordan", "LB": "Lebanon", "TN": "Tunisia",
+    "DZ": "Algeria", "MA": "Morocco"
 }
 
 # Compound & single domain TLD suffixes mapped to full country names
@@ -913,6 +1021,19 @@ COUNTRY_NAME_NORMALIZER = {
     "br": "Brazil", "brasil": "Brazil", "brazil": "Brazil",
     "mx": "Mexico", "méxico": "Mexico", "mexico": "Mexico",
     "ro": "Romania", "romania": "Romania",
+    "pl": "Poland", "poland": "Poland", "polska": "Poland",
+    "cz": "Czech Republic", "czech republic": "Czech Republic", "czechia": "Czech Republic",
+    "hu": "Hungary", "hungary": "Hungary",
+    "gr": "Greece", "greece": "Greece",
+    "tr": "Turkey", "turkey": "Turkey", "türkiye": "Turkey",
+    "ee": "Estonia", "estonia": "Estonia",
+    "lv": "Latvia", "latvia": "Latvia",
+    "lt": "Lithuania", "lithuania": "Lithuania",
+    "sk": "Slovakia", "slovakia": "Slovakia",
+    "si": "Slovenia", "slovenia": "Slovenia",
+    "hr": "Croatia", "croatia": "Croatia",
+    "bg": "Bulgaria", "bulgaria": "Bulgaria",
+    "rs": "Serbia", "serbia": "Serbia",
     "sa": "Saudi Arabia", "ksa": "Saudi Arabia", "saudi arabia": "Saudi Arabia",
     "eg": "Egypt", "egypt": "Egypt",
     "ae": "United Arab Emirates", "uae": "United Arab Emirates", "united arab emirates": "United Arab Emirates",
@@ -925,6 +1046,18 @@ COUNTRY_NAME_NORMALIZER = {
     "pt": "Portugal", "portugal": "Portugal",
     "il": "Israel", "israel": "Israel",
     "cn": "China", "china": "China",
+    "vn": "Vietnam", "vietnam": "Vietnam",
+    "ir": "Iran", "iran": "Iran",
+    "pk": "Pakistan", "pakistan": "Pakistan",
+    "bd": "Bangladesh", "bangladesh": "Bangladesh",
+    "th": "Thailand", "thailand": "Thailand",
+    "my": "Malaysia", "malaysia": "Malaysia",
+    "id": "Indonesia", "indonesia": "Indonesia",
+    "ph": "Philippines", "philippines": "Philippines",
+    "za": "South Africa", "south africa": "South Africa",
+    "ar": "Argentina", "argentina": "Argentina",
+    "cl": "Chile", "chile": "Chile",
+    "co": "Colombia", "colombia": "Colombia",
 }
 
 
@@ -943,12 +1076,16 @@ def normalize_country_name(name):
     return s.title() if len(s) > 3 else upper_s
 
 
-def get_doi_countries(doi):
+DOI_WORK_CACHE = {}
+
+
+def get_doi_work_data(doi):
     """
-    Fetches institution countries associated with a DOI or arXiv link using OpenAlex with caching.
+    Fetches authorships & institutions associated with a DOI or arXiv link using OpenAlex & Crossref with caching.
+    Returns: dict {'countries': set of ISOs, 'authors': [{'name': '...', 'countries': [...], 'affiliations': [...]}]}
     """
     if not doi:
-        return set()
+        return {"countries": set(), "authors": []}
     norm_doi = str(doi).strip()
     for prefix in ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/"):
         if norm_doi.lower().startswith(prefix):
@@ -966,34 +1103,149 @@ def get_doi_countries(doi):
 
     norm_key = norm_doi.lower()
     with DOI_CACHE_LOCK:
-        if norm_key in DOI_COUNTRY_CACHE:
-            return DOI_COUNTRY_CACHE[norm_key]
+        if norm_key in DOI_WORK_CACHE:
+            return DOI_WORK_CACHE[norm_key]
 
-    countries = set()
+    work_data = {"countries": set(), "authors": []}
     try:
-        url = f"https://api.openalex.org/works/https://doi.org/{norm_doi}"
-        r = requests.get(url, timeout=2.5, headers={"User-Agent": "mailto:verifier@academic-scraper.org"})
+        # 1. Query OpenAlex API
+        url = f"https://api.openalex.org/works/doi:{norm_doi}"
+        r = requests.get(url, timeout=3.0, headers={"User-Agent": "mailto:verifier@academic-scraper.org"})
+        if r.status_code != 200:
+            url = f"https://api.openalex.org/works/https://doi.org/{norm_doi}"
+            r = requests.get(url, timeout=3.0, headers={"User-Agent": "mailto:verifier@academic-scraper.org"})
+
         if r.status_code == 200:
             data = r.json()
             for a in data.get("authorships", []):
-                for c in a.get("countries", []):
-                    countries.add(str(c).upper().strip())
+                a_name = (a.get("author", {}) or {}).get("display_name", "")
+                a_countries = [str(c).upper().strip() for c in a.get("countries", []) if c]
+                if not a_countries:
+                    for inst in a.get("institutions", []) or []:
+                        cc = inst.get("country_code")
+                        if cc:
+                            a_countries.append(str(cc).upper().strip())
+                for c in a_countries:
+                    work_data["countries"].add(c)
+                if a_name:
+                    work_data["authors"].append({
+                        "name": a_name,
+                        "countries": a_countries,
+                        "affiliations": a.get("raw_affiliation_strings", []) or []
+                    })
     except Exception:
         pass
 
+    # 2. Fallback to Crossref API if OpenAlex returned no countries
+    if not work_data["countries"] and not norm_doi.startswith("10.48550/arXiv"):
+        try:
+            cr_url = f"https://api.crossref.org/works/{norm_doi}"
+            cr_r = requests.get(cr_url, timeout=3.0, headers={"User-Agent": "mailto:verifier@academic-scraper.org"})
+            if cr_r.status_code == 200:
+                msg = cr_r.json().get("message", {})
+                for a in msg.get("author", []):
+                    given = a.get("given", "")
+                    family = a.get("family", "")
+                    full_n = f"{given} {family}".strip() or a.get("name", "")
+                    aff_list = [aff.get("name", "") for aff in a.get("affiliation", []) if aff.get("name")]
+                    a_countries = []
+                    for aff_str in aff_list:
+                        aff_lower = aff_str.lower()
+                        for c_key, rule in COUNTRY_DOMAIN_RULES.items():
+                            if any(kw in aff_lower for kw in rule.get("keywords", [])):
+                                iso_list = rule.get("iso", [])
+                                if iso_list:
+                                    a_countries.extend(iso_list)
+                                    work_data["countries"].update(iso_list)
+                                    break
+                    if full_n:
+                        work_data["authors"].append({
+                            "name": full_n,
+                            "countries": a_countries,
+                            "affiliations": aff_list
+                        })
+        except Exception:
+            pass
+
     with DOI_CACHE_LOCK:
-        DOI_COUNTRY_CACHE[norm_key] = countries
-    return countries
+        DOI_WORK_CACHE[norm_key] = work_data
+        DOI_COUNTRY_CACHE[norm_key] = work_data["countries"]
+
+    return work_data
 
 
-def detect_country(email, doi="", affiliation="", paper_title="", allowed_countries=None, allow_network=True):
+def get_doi_countries(doi):
+    """
+    Fetches institution countries associated with a DOI or arXiv link using OpenAlex with caching.
+    """
+    data = get_doi_work_data(doi)
+    return data.get("countries", set())
+
+
+def get_doi_author_country(doi, author_name=""):
+    """
+    Finds the full canonical country name for a specific author using DOI metadata (OpenAlex/Crossref).
+    Matches author by full name, surname, or token overlap.
+    Falls back to first author or primary paper country.
+    """
+    if not doi:
+        return ""
+    work_data = get_doi_work_data(doi)
+    authors = work_data.get("authors", [])
+
+    if author_name and authors:
+        clean_target = re.sub(r'[^a-z\s]', '', author_name.lower()).strip()
+        target_tokens = [t for t in clean_target.split() if len(t) >= 2]
+        target_surname = target_tokens[-1] if target_tokens else ""
+
+        # Strategy 1: Match specific author by name/surname
+        for a in authors:
+            cand_name = re.sub(r'[^a-z\s]', '', a["name"].lower()).strip()
+            cand_tokens = [t for t in cand_name.split() if len(t) >= 2]
+            cand_surname = cand_tokens[-1] if cand_tokens else ""
+
+            matched = False
+            if clean_target == cand_name:
+                matched = True
+            elif target_surname and cand_surname and target_surname == cand_surname:
+                if len(target_tokens) == 1 or len(cand_tokens) == 1:
+                    matched = True
+                elif any(t in cand_tokens for t in target_tokens[:-1]) or target_tokens[0][0] == cand_tokens[0][0]:
+                    matched = True
+
+            if matched:
+                for code in a.get("countries", []):
+                    if code in ISO_TO_COUNTRY_NAME:
+                        return ISO_TO_COUNTRY_NAME[code]
+                for aff in a.get("affiliations", []):
+                    aff_lower = aff.lower()
+                    for c_key, rule in COUNTRY_DOMAIN_RULES.items():
+                        if any(kw in aff_lower for kw in rule.get("keywords", [])):
+                            return normalize_country_name(c_key)
+
+    # Strategy 2: Fallback to first author's country
+    for a in authors:
+        for code in a.get("countries", []):
+            if code in ISO_TO_COUNTRY_NAME:
+                return ISO_TO_COUNTRY_NAME[code]
+
+    # Strategy 3: Fallback to any paper country
+    for code in work_data.get("countries", set()):
+        if code in ISO_TO_COUNTRY_NAME:
+            return ISO_TO_COUNTRY_NAME[code]
+
+    return ""
+
+
+def detect_country(email, doi="", affiliation="", paper_title="", author_name="", allowed_countries=None, allow_network=True):
     """
     Detects the full country name for an academic author using multi-layered heuristic intelligence:
     1. Direct Email ccTLD match (e.g. .edu -> United States, .ac.uk -> United Kingdom, .de -> Germany, .it -> Italy)
     2. Known institutional domain match (e.g. hopkinsmedicine.org, mpg.de, inserm.fr)
     3. Affiliation text matching (keywords for countries and universities)
-    4. DOI OpenAlex lookup with in-memory caching (optional via allow_network)
-    5. Contextual fallback if allowed_countries was strictly filtered in UI
+    4. DOI OpenAlex / Crossref author-level lookup with caching (enabled by default)
+    5. Paper title country mention heuristics
+    6. Contextual fallback if allowed_countries was strictly filtered in UI
     Returns: Canonical Full Country Name (e.g. 'United States', 'United Kingdom', 'Germany') or 'Unknown'
     """
     if not email:
@@ -1022,15 +1274,25 @@ def detect_country(email, doi="", affiliation="", paper_title="", allowed_countr
                 if kw in aff_text:
                     return normalize_country_name(country_key)
 
-    # 4. DOI lookup via OpenAlex
+    # 4. DOI lookup via OpenAlex & Crossref with author-level matching
     if doi and allow_network:
-        iso_codes = get_doi_countries(doi)
-        if iso_codes:
-            for code in iso_codes:
-                if code in ISO_TO_COUNTRY_NAME:
-                    return ISO_TO_COUNTRY_NAME[code]
+        doi_c = get_doi_author_country(doi, author_name=author_name)
+        if doi_c and doi_c != "Unknown":
+            return normalize_country_name(doi_c)
 
-    # 5. Allowed countries contextual fallback
+    # 5. Paper title country mention heuristics
+    title_text = (paper_title or "").lower()
+    if title_text:
+        for country_key, rule in COUNTRY_DOMAIN_RULES.items():
+            for kw in rule.get("keywords", []):
+                if len(kw) <= 4:
+                    if re.search(r'\b' + re.escape(kw) + r'\b', title_text):
+                        return normalize_country_name(country_key)
+                else:
+                    if kw in title_text:
+                        return normalize_country_name(country_key)
+
+    # 6. Allowed countries contextual fallback
     if allowed_countries and len(allowed_countries) == 1:
         single_c = allowed_countries[0].strip()
         if single_c:
@@ -1237,7 +1499,9 @@ def verify_single_record(record, api_key=None, allowed_countries=None):
         email=cleaned_email,
         doi=cleaned_doi,
         paper_title=cleaned_title,
-        allowed_countries=allowed_countries
+        author_name=cleaned_author,
+        allowed_countries=allowed_countries,
+        allow_network=True
     )
 
     # Cleaned record with strictly the 5 requested columns in sequential order:
@@ -1322,7 +1586,7 @@ def normalize_and_realign_records(records):
         c_doi = re.sub(r'[\r\n\t]+', '', doi).strip()
 
         if not country_val or country_val.lower() == "unknown":
-            country_val = detect_country(c_email, doi=c_doi, affiliation="", paper_title=c_title, allowed_countries=None)
+            country_val = detect_country(c_email, doi=c_doi, affiliation="", paper_title=c_title, author_name=c_author, allowed_countries=None, allow_network=True)
 
         realigned.append({
             "Paper Title": c_title,
@@ -1382,4 +1646,4 @@ def batch_verify_records(records, api_key=None, allowed_countries=None, max_work
             if progress_callback:
                 progress_callback(processed, total, len(valid_records), len(dropped_records))
 
-    return valid_records, dropped_records
+    return valid_records, dropped_records

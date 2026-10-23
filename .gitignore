@@ -13,6 +13,9 @@ ENV/
 
 # Environment Variables & IDE
 .env
+*.env*
+credentials*.txt
+credentials.env.txt
 .vscode/
 
 # Logs & temp files

@@ -1,0 +1,8 @@
+# Master Bounce Suppression List
+# Any email in this list will be permanently suppressed and dropped across all scrapers & verifiers.
+deepti.john@newcastle.ac.uk
+monica.sierra@nih.gov
+wangav@uw.edu
+jacob.levman@eng.ox.ac.uk
+angelo.arleo@inserm.fr
+emmanuel.heilmann@i-med.ac.at

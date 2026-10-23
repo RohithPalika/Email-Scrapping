@@ -5,13 +5,12 @@ Repair & Realign Utility for Email-Scraping / WS2.0
 2. Restores missing DOIs by cross-referencing against master lists and source workbooks.
 3. Cleans titles (unescapes HTML entities, removes linebreaks, trims spaces).
 4. Sanitizes author names (removes section headers, multi-line artifacts, extracts true person names).
-5. Enforces strict sequential order: [Paper Title, Author Name, Email ID, DOI] with executive Navy formatting.
+5. Enforces strict sequential order: [Paper Title, Author Name, Email ID, Country, DOI] with executive Navy formatting.
 """
 
 import os
 import sys
 import glob
-import re
 import pandas as pd
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -22,8 +21,8 @@ if WS2_DIR not in sys.path:
 from app import format_and_save_excel, EXCEL_BASE_DIR, MASTER_EMAIL_FILE  # type: ignore # noqa: E402
 from extractors.email_verifier import (  # type: ignore # noqa: E402
     clean_paper_title,
-    clean_author_name,
     normalize_and_realign_records,
+    is_suppressed_email,
 )
 
 
@@ -79,6 +78,7 @@ def repair_excel_file(file_path, doi_cache):
         df = pd.read_excel(file_path)
         records = df.to_dict(orient="records")
         realigned = normalize_and_realign_records(records)
+        realigned = [r for r in realigned if not is_suppressed_email(r.get("Email ID", ""))]
 
         # Restore missing DOIs from cache
         for rec in realigned:
@@ -106,6 +106,7 @@ def repair_master_csv(doi_cache):
         df = pd.read_csv(MASTER_EMAIL_FILE, encoding="utf-8-sig")
         records = df.to_dict(orient="records")
         realigned = normalize_and_realign_records(records)
+        realigned = [r for r in realigned if not is_suppressed_email(r.get("Email ID", ""))]
 
         # Restore missing DOIs
         for rec in realigned:
@@ -118,7 +119,7 @@ def repair_master_csv(doi_cache):
                     rec["DOI"] = cached_doi
 
         out_df = pd.DataFrame(realigned)
-        target_cols = ["Paper Title", "Author Name", "Email ID", "DOI"]
+        target_cols = ["Paper Title", "Author Name", "Email ID", "Country", "DOI"]
         for col in target_cols:
             if col not in out_df.columns:
                 out_df[col] = ""
